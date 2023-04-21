@@ -1,0 +1,17 @@
+**/*.md
+**/*.svg
+**/*.ejs
+**/*.html
+
+node_modules
+dist
+public
+
+.dockerignore
+.DS_Store
+.eslintignore
+.editorconfig
+.gitignore
+.prettierignore
+
+LICENSE
