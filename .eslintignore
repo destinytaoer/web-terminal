@@ -1,0 +1,11 @@
+node_modules
+lib
+es
+dist
+docs
+mock
+scripts
+docs
+.eslintrc.js
+tsconfig.json
+functions
