@@ -3,5 +3,28 @@
 @tailwind utilities;
 
 @layer utilities {
-    
+    .xterm {
+        height: 100%;
+        padding: 10px;
+    }
+
+    .xterm .xterm-viewport {
+        overflow-y: auto;
+        overflow-y: overlay;
+    }
+
+    .xterm-viewport::-webkit-scrollbar {
+        width: 6px;
+        border-radius: 6px;
+    }
+
+    .xterm-viewport::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .xterm-viewport::-webkit-scrollbar-thumb {
+        width: 6px;
+        border-radius: 6px;
+        background: #DEE0E6;
+    }
 }
