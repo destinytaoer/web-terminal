@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
-import { throttle } from 'lodash'
+import { debounce, throttle } from 'lodash'
 import { v4 as uuid } from 'uuid'
 import { WebTerminal } from '@/core/WebTerminal'
 import { generateMessage, processMessageFromServer } from './config'
@@ -64,11 +64,9 @@ export const useTerminal = () => {
         terminal.destroySocket(false)
       })
 
-      const resizeListener = terminal.onResize(
-        throttle(({ cols, rows }) => {
-          socket?.sendMessage('resize', { cols, rows })
-        }, 300),
-      )
+      const resizeListener = terminal.onResize(({ cols, rows }) => {
+        socket?.sendMessage('resize', { cols, rows })
+      })
 
       return () => {
         if (timer) clearInterval(timer)

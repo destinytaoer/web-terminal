@@ -5,6 +5,7 @@ import { CanvasAddon } from 'xterm-addon-canvas'
 import { WebglAddon } from 'xterm-addon-webgl'
 import { AttachAddon, AttachAddonOptions } from './AttachAddon'
 import { detectWebGLContext } from './utils'
+import { debounce } from 'lodash'
 
 /**
  * 1. new temrinal
@@ -80,13 +81,13 @@ export class WebTerminal extends Terminal {
     return this.socket
   }
 
-  public fit = () => {
+  public fit = debounce(() => {
     try {
       this.fitAddon.fit()
     } catch (e) {
       console.error('fit error', e)
     }
-  }
+  }, 500)
 
   private resizeCb = () => {
     this.fit()
