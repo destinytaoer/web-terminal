@@ -49,7 +49,7 @@ export class WebTerminal extends Terminal {
       console.log('render xterm use webgl')
       const webglAddon = new WebglAddon()
       webglAddon.onContextLoss((e) => {
-        console.error('something error: lost webgl context')
+        console.error('something error: lost webgl context', e)
         webglAddon.dispose()
       })
       this.loadAddon(webglAddon)

@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
-import { debounce, throttle } from 'lodash'
 import { v4 as uuid } from 'uuid'
-import { WebTerminal } from '@/core/WebTerminal'
+import { WebTerminal } from 'core'
 import { generateMessage, processMessageFromServer } from './config'
 
 const url = 'ws://127.0.0.1:3001/node-pty'
@@ -53,12 +52,12 @@ export const useTerminal = () => {
         }, 30 * 1000)
       })
 
-      socket.addListener('error', (e) => {
+      socket.addListener('error', () => {
         terminal.write('Connect Error.')
       })
 
-      socket.addListener('close', (e) => {
-        const { code, reason, wasClean } = e
+      socket.addListener('close', () => {
+        // const { code, reason, wasClean } = e
         terminal.write('disconnect.')
         if (timer) clearInterval(timer)
         terminal.destroySocket(false)

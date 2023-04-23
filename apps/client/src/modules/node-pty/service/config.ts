@@ -1,4 +1,4 @@
-import { MessageData, MessageType } from '@/core/AttachAddon'
+import { MessageData, MessageType } from 'core'
 
 export const K8sWebsocketProtocol = 'base64.channel.k8s.io'
 export const K8sExecMsgChannel = {

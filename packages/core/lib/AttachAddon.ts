@@ -11,10 +11,7 @@ export type MessageData = {
   binary: string
   heartbeat: string
 }
-export type SendMessageMapper = (
-  type: MessageType,
-  data: MessageData[MessageType],
-) => string | ArrayBufferLike | Blob | ArrayBufferView | undefined
+export type SendMessageMapper = (type: MessageType, data: MessageData[MessageType]) => string | ArrayBufferLike | Blob | ArrayBufferView | undefined
 
 export type OnmessageMapper = (data: ArrayBuffer | string) => string | Uint8Array | undefined
 
@@ -77,10 +74,7 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     // this.addListener('error', () => this.dispose())
   }
 
-  public addListener<K extends keyof WebSocketEventMap>(
-    type: K,
-    handler: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
-  ) {
+  public addListener<K extends keyof WebSocketEventMap>(type: K, handler: (this: WebSocket, ev: WebSocketEventMap[K]) => any) {
     this._disposables.push(addSocketListener(this, type, handler))
   }
 
