@@ -8,16 +8,25 @@ import { detectWebGLContext } from './utils'
 import { debounce } from 'lodash'
 
 /**
- * 1. new temrinal
- * 2. open element
- * 3. attach socket
- *    3.1 new websocket
- *    3.2 socket onopen -> focus / socket send auth message
- *    3.3 terminal ondata -> socket send
- *    3.4 socket onmessage -> terminal write / heartbeat / nothing
- *    3.5 socket onerror onclose -> dispose
- *    3.6 terminal onResize -> socket send resize message
- *    3.7 interval -> socket send heartbeat message
+ * ● init terminal
+ *   ○ new Terminal
+ *   ○ terminal.open(element)
+ *   ○ load fitAddon -> fit window resize listener
+ *   ○ load weblinkAddon
+ *   ○ load renderer -> dom/canvas/webgl
+ * ● connect websocket
+ *   ○ new Websocket -> with auth info & terminal size info
+ *   ○ socket onopen -> terminal.focus / send auth message & terminal size message
+ *   ○ socket onerror -> terminal.write('connect error') / error handler
+ *   ○ socket onclose -> terminal.write('disconnect')/ dispose / show close code and reason
+ *   ○ socket onmessage -> terminal.write -> 返回消息处理
+ *   ○ terminal ondata -> socket send input message -> 输入消息处理
+ *   ○ terminal onresize -> socket send resize message
+ *   ○ deal time -> socket send heartbeat message
+ * ● dispose terminal
+ *   ○ socket.close
+ *   ○ terminal.dispose
+ *   ○ window remove resize listener
  */
 export class WebTerminal extends Terminal {
   public fitAddon: FitAddon
