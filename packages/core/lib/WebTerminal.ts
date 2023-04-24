@@ -79,27 +79,10 @@ export class WebTerminal extends Terminal {
       element = el
     }
 
+    // 初始化
     this.open(element)
+    // 实现 fit resize 能力
     this.fitWindowResize()
-  }
-
-  public connectSocket(url: string, protocols?: string | string[], options?: AttachAddonOptions) {
-    this.socket = new AttachAddon(url, protocols, options)
-    this.loadAddon(this.socket)
-
-    return this.socket
-  }
-
-  public fit = debounce(() => {
-    try {
-      this.fitAddon.fit()
-    } catch (e) {
-      console.error('fit error', e)
-    }
-  }, 500)
-
-  private resizeCb = () => {
-    this.fit()
   }
 
   public fitWindowResize() {
@@ -107,8 +90,32 @@ export class WebTerminal extends Terminal {
     window.addEventListener('resize', this.resizeCb)
   }
 
+  public connectSocket(url: string, protocols?: string | string[], options?: AttachAddonOptions) {
+    const socket = new AttachAddon(url, protocols, options)
+
+    // loadAddon 的时候调用 addon 的 activate, 传入 terminal
+    this.loadAddon(socket)
+
+    this.socket = socket
+
+    return socket
+  }
+
+  private resizeCb = debounce(() => {
+    this.fit()
+  }, 500)
+
+  public fit = () => {
+    try {
+      this.fitAddon.fit()
+    } catch (e) {
+      console.error('fit error', e)
+    }
+  }
+
   public destroySocket(manualClose = false) {
     if (this.socket) {
+      // 前端手动关闭
       if (manualClose) this.socket.close(1000, 'frontend close')
       this.socket.dispose()
       this.socket = undefined
@@ -116,24 +123,13 @@ export class WebTerminal extends Terminal {
   }
 
   public destroy() {
-    this.destroySocket(true)
+    // 前端手动关闭
+    if (this.socket) {
+      this.socket.close(1000, 'frontend close')
+      this.socket.dispose()
+      this.socket = undefined
+    }
     window.removeEventListener('resize', this.resizeCb)
     this.dispose()
   }
 }
-
-// const connectSocket = () => {
-//   const otherOptions = {
-//     protocol: 'channel.k8s.io',
-//     command: 'sh',
-//     stdin: true,
-//     stdout: true,
-//     stderr: true,
-//     tty: true,
-//   }
-//   const query = qs.stringify({
-//     // ...podInfo,
-//     ...otherOptions,
-//   })
-//   return new WebSocket(`ws://${location.host}?${query}`, ['TOKEN'])
-// }

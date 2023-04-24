@@ -17,9 +17,9 @@ export const useTerminal = () => {
   useEffect(() => {
     if (terminalEl.current) {
       terminal.init(terminalEl.current)
-    }
-    return () => {
-      terminal.destroy()
+      return () => {
+        terminal.destroy()
+      }
     }
   }, [])
 
@@ -33,43 +33,30 @@ export const useTerminal = () => {
       terminal.clear()
 
       const socket = terminal.connectSocket(urlWithQuery, [], {
-        sendMessageMapper: generateMessage,
-        onmessageMapper: processMessageFromServer,
+        processMsgSendToServer: generateMessage,
+        processMsgFromServer: processMessageFromServer,
       })
 
+      // 添加心跳
       let timer: number | undefined
-      socket.addListener('open', () => {
-        // 在下一个事件循环中执行, 相当于 nextTick
-        // Promise.resolve().then(() => {
-        //   const { rows, cols } = terminal
-        //   socket?.sendMessage('resize', { cols, rows })
-        // })
-
-        terminal.focus()
-
+      socket.addEventListener('open', () => {
         timer = window.setInterval(function () {
           socket?.sendMessage('heartbeat')
         }, 30 * 1000)
       })
 
-      socket.addListener('error', () => {
+      socket.addEventListener('error', () => {
         terminal.write('Connect Error.')
       })
 
-      socket.addListener('close', () => {
+      socket.addEventListener('close', () => {
         // const { code, reason, wasClean } = e
         terminal.write('disconnect.')
         if (timer) clearInterval(timer)
-        terminal.destroySocket(false)
-      })
-
-      const resizeListener = terminal.onResize(({ cols, rows }) => {
-        socket?.sendMessage('resize', { cols, rows })
       })
 
       return () => {
         if (timer) clearInterval(timer)
-        resizeListener.dispose()
         terminal.destroySocket(true)
       }
     }

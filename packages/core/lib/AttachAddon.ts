@@ -1,8 +1,7 @@
 import { Terminal, IDisposable, ITerminalAddon } from 'xterm'
 import { addSocketListener } from './utils'
 
-export type MessageType = 'data' | 'binary' | 'resize' | 'heartbeat'
-export type MessageData = {
+export type MessageDataMap = {
   resize: {
     cols: number
     rows: number
@@ -11,19 +10,24 @@ export type MessageData = {
   binary: string
   heartbeat: string
 }
-export type SendMessageMapper = (type: MessageType, data: MessageData[MessageType]) => string | ArrayBufferLike | Blob | ArrayBufferView | undefined
+export type MessageType = keyof MessageDataMap
+
+export type SendMessageMapper = (
+  type: MessageType,
+  data?: MessageDataMap[MessageType],
+) => string | ArrayBufferLike | Blob | ArrayBufferView | undefined
 
 export type OnmessageMapper = (data: ArrayBuffer | string) => string | Uint8Array | undefined
 
 export interface AttachAddonOptions {
-  sendMessageMapper?: SendMessageMapper
-  onmessageMapper?: OnmessageMapper
+  processMsgSendToServer?: SendMessageMapper
+  processMsgFromServer?: OnmessageMapper
 }
 
 export class AttachAddon extends WebSocket implements ITerminalAddon {
   private _disposables: IDisposable[] = []
 
-  private _sendMessageMapper: SendMessageMapper = (type: MessageType, data?: any) => {
+  private _processMsgSendToServer: SendMessageMapper = (type: MessageType, data?: any) => {
     switch (type) {
       case 'data':
         return data
@@ -38,7 +42,7 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     }
   }
 
-  private _onmessageMapper: OnmessageMapper = (data: ArrayBuffer | string) => {
+  private _processMsgFromServer: OnmessageMapper = (data: ArrayBuffer | string) => {
     try {
       if (typeof data === 'string') {
         const obj = JSON.parse(data)
@@ -56,31 +60,41 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     // always set binary type to arraybuffer, we do not handle blobs
     this.binaryType = 'arraybuffer'
 
-    this._sendMessageMapper = options?.sendMessageMapper ?? this._sendMessageMapper
-    this._onmessageMapper = options?.onmessageMapper ?? this._onmessageMapper
+    this._processMsgSendToServer = options?.processMsgSendToServer ?? this._processMsgSendToServer
+    this._processMsgFromServer = options?.processMsgFromServer ?? this._processMsgFromServer
   }
 
   public activate(terminal: Terminal): void {
-    this.addListener('message', (ev) => {
-      const data: ArrayBuffer | string = ev.data
-      const message = this._onmessageMapper(data)
-      if (message) terminal.write(message)
+    // 建立连接后获取焦点
+    this.addListener('open', () => {
+      terminal.focus()
     })
 
+    // 处理消息
+    this.addListener('message', (ev) => {
+      const data: ArrayBuffer | string = ev.data
+      const message = this._processMsgFromServer(data)
+      if (message) terminal.write(message)
+    })
+    this.attachTerminal(terminal)
+
+    this.addListener('close', () => this.dispose())
+    this.addListener('error', () => this.dispose())
+  }
+
+  public attachTerminal(terminal: Terminal) {
     this._disposables.push(terminal.onData((data) => this.sendMessage('data', data)))
     this._disposables.push(terminal.onBinary((data) => this.sendMessage('binary', data)))
-
-    // this.addListener('close', () => this.dispose())
-    // this.addListener('error', () => this.dispose())
+    this._disposables.push(terminal.onResize((data) => this.sendMessage('resize', data)))
   }
 
   public addListener<K extends keyof WebSocketEventMap>(type: K, handler: (this: WebSocket, ev: WebSocketEventMap[K]) => any) {
     this._disposables.push(addSocketListener(this, type, handler))
   }
 
-  public sendMessage(type: MessageType, data?: any) {
+  public sendMessage<T extends MessageType>(type: T, data?: MessageDataMap[T]) {
     if (this._checkOpenSocket()) {
-      const message = this._sendMessageMapper(type, data)
+      const message = this._processMsgSendToServer(type, data)
       if (message) this.send(message)
     }
   }
