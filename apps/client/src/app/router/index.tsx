@@ -1,25 +1,30 @@
-import { createBrowserRouter } from "react-router-dom";
-import ErrorPage from "./error";
-import NotFoundPage from "./404";
-import { GlobalLayout } from "@/app/layout";
-import { Home } from "@/modules/home";
-import { NodePty } from "@/modules/node-pty";
+import { createBrowserRouter } from 'react-router-dom'
+import ErrorPage from './error'
+import NotFoundPage from './404'
+import { GlobalLayout } from '@/app/layout'
+import { Home } from '@/modules/home'
+import { NodePty } from '@/modules/node-pty'
+import { ExecBase64 } from '@/modules/k8s'
 
 export const router = createBrowserRouter([
   {
-    path: "/",
+    path: '/',
     element: <GlobalLayout />,
     errorElement: <ErrorPage />,
     children: [
       {
-        path: "/",
+        path: '/',
         element: <Home />,
       },
       {
-        path: "/node-pty",
+        path: '/node-pty',
         element: <NodePty />,
       },
-      { path: "*", element: <NotFoundPage /> },
+      {
+        path: '/exec-base64',
+        element: <ExecBase64 />,
+      },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
-]);
+])
