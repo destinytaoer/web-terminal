@@ -1,6 +1,14 @@
 # Web Terminal
 
-web terminal demo, 使用 turborepo 创建的 monorepo 项目
+web terminal demo, 使用 turborepo & pnpm workspace 创建的 monorepo 项目
+
+实现 demo:
+
+- [x] node-pty
+- [ ] node-pty in binary
+- [ ] k8s exec in base64 channel
+- [ ] k8s exec in binary channel
+- [ ] k8s exec with zmodem
 
 ## Start
 
