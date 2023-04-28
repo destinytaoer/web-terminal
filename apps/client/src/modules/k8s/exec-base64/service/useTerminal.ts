@@ -1,16 +1,14 @@
 import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
-import { v4 as uuid } from 'uuid'
 import { WebTerminal } from 'core'
-import { generateMessage, processMessageFromServer } from './config'
+import { generateMessage, K8sWebsocketProtocol, processMessageFromServer } from './config'
 
-const url = 'ws://127.0.0.1:3001/node-pty'
+const url = 'wss://xxx/exec'
+const token = 'NAz0nAI34X1UpS5lILOKbK1fO2I_3Qh7UVKq2-kt_3o.650omNloyCWKfLWrlZFDGtsVLLi02evhjlxqLQgDfX8'
 export const useTerminal = () => {
   const terminalEl = useRef<HTMLDivElement>(null)
   const terminal = useCreation(() => {
-    return new WebTerminal({
-      fontSize: 20,
-    })
+    return new WebTerminal({})
   }, [])
 
   // terminal 初始化
@@ -25,14 +23,13 @@ export const useTerminal = () => {
 
   useEffect(() => {
     if (url) {
-      const id = uuid()
       const cols = terminal.cols
       const rows = terminal.rows
-      const urlWithQuery = `${url}?id=${id}&cols=${cols}&rows=${rows}`
+      const urlWithQuery = `${url}?token=${token}&columns=${cols}&lines=${rows}`
 
       terminal.clear()
 
-      const socket = terminal.connectSocket(urlWithQuery, [], {
+      const socket = terminal.connectSocket(urlWithQuery, [K8sWebsocketProtocol], {
         processMsgSendToServer: generateMessage,
         processMsgFromServer: processMessageFromServer,
       })
@@ -49,8 +46,9 @@ export const useTerminal = () => {
         terminal.write('Connect Error.')
       })
 
-      socket.addEventListener('close', () => {
-        // const { code, reason, wasClean } = e
+      socket.addEventListener('close', (e) => {
+        const { code, reason } = e
+        console.error('close', code, reason)
         terminal.write('disconnect.')
         if (timer) clearInterval(timer)
       })
