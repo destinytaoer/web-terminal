@@ -30,6 +30,7 @@ importers:
       react: ^18.2.0
       react-dom: ^18.2.0
       react-router-dom: ^6.10.0
+      scheduler: workspace:*
       tailwindcss: ^3.3.1
       tsconfig: workspace:*
       typescript: ^5.0.2
@@ -49,6 +50,7 @@ importers:
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
       react-router-dom: 6.10.0_biqbaboplfbrettd7655fr4n2y
+      scheduler: link:../../packages/scheduler
       uuid: 9.0.0
       xterm: 5.1.0
       xterm-addon-canvas: 0.3.0_xterm@5.1.0
@@ -106,6 +108,14 @@ importers:
       xterm-addon-webgl: 0.14.0_xterm@5.1.0
     devDependencies:
       '@types/lodash': 4.14.194
+      tsconfig: link:../tsconfig
+      typescript: 4.9.5
+
+  packages/scheduler:
+    specifiers:
+      tsconfig: workspace:*
+      typescript: ^4.9.3
+    devDependencies:
       tsconfig: link:../tsconfig
       typescript: 4.9.5
 
