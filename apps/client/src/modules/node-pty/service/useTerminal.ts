@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
 import { v4 as uuid } from 'uuid'
-import { WebTerminal } from 'core'
+import { Logger, WebTerminal } from 'core'
 import { generateMessage, processMessageFromServer } from './config'
 
+const log = new Logger('WebTerminal')
 const url = 'ws://127.0.0.1:3001/node-pty'
 export const useTerminal = () => {
   const terminalEl = useRef<HTMLDivElement>(null)
@@ -32,6 +33,7 @@ export const useTerminal = () => {
 
       terminal.clear()
 
+      log.info('connect socket', urlWithQuery)
       const socket = terminal.connectSocket(urlWithQuery, [], {
         processMsgSendToServer: generateMessage,
         processMsgFromServer: processMessageFromServer,
@@ -40,6 +42,7 @@ export const useTerminal = () => {
       // 添加心跳
       let timer: number | undefined
       socket.addEventListener('open', () => {
+        log.success('socket open')
         timer = window.setInterval(function () {
           socket?.sendMessage('heartbeat')
         }, 30 * 1000)
