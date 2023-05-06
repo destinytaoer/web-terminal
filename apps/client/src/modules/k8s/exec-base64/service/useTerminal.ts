@@ -12,25 +12,25 @@ export const useTerminal = () => {
   }, [])
 
   // terminal 初始化
-  useEffect(() => {
-    if (terminalEl.current) {
-      terminal.init(terminalEl.current)
-      return () => {
-        terminal.destroy()
-      }
-    }
-  }, [])
+  // useEffect(() => {
+  //   if (terminalEl.current) {
+  //     terminal.init(terminalEl.current)
+  //     return () => {
+  //       terminal.destroy()
+  //     }
+  //   }
+  // }, [])
 
   useEffect(() => {
     if (url) {
-      const cols = terminal.cols
-      const rows = terminal.rows
+      const xterm = terminal.init(terminalEl.current)
+
+      const cols = xterm.cols
+      const rows = xterm.rows
       const urlWithQuery = `${url}?token=${token}&columns=${cols}&lines=${rows}`
 
-      terminal.clear()
-
       const socket = terminal.connectSocket(urlWithQuery, [K8sWebsocketProtocol], {
-        processMsgSendToServer: generateMessage,
+        processMsgToServer: generateMessage,
         processMsgFromServer: processMessageFromServer,
       })
 
@@ -55,7 +55,7 @@ export const useTerminal = () => {
 
       return () => {
         if (timer) clearInterval(timer)
-        terminal.destroySocket(true)
+        terminal.destroy()
       }
     }
   }, [url])

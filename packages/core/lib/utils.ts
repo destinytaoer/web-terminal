@@ -123,3 +123,5 @@ export class Logger {
     this.log('warn', title, ...args)
   }
 }
+
+export const log = new Logger('WebTerminal', 'dev')

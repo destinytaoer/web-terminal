@@ -1,11 +1,16 @@
-import { ITerminalOptions, Terminal } from 'xterm'
+import { IDisposable, ITerminalAddon, ITerminalOptions, Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { WebLinksAddon } from 'xterm-addon-web-links'
 import { CanvasAddon } from 'xterm-addon-canvas'
 import { WebglAddon } from 'xterm-addon-webgl'
 import { AttachAddon, AttachAddonOptions } from './AttachAddon'
-import { detectWebGLContext } from './utils'
+import { detectWebGLContext, log } from './utils'
 import { debounce } from 'lodash'
+
+export interface WebTerminalOptions {
+  rendererType?: 'dom' | 'canvas' | 'webgl'
+  xtermOptions?: ITerminalOptions
+}
 
 /**
  * ● init terminal
@@ -28,43 +33,19 @@ import { debounce } from 'lodash'
  *   ○ terminal.dispose
  *   ○ window remove resize listener
  */
-export class WebTerminal extends Terminal {
-  public fitAddon: FitAddon
+export class WebTerminal {
+  private fitAddon = new FitAddon()
+  private webglAddon?: WebglAddon
+  private canvasAddon?: CanvasAddon
 
-  public socket?: AttachAddon
+  xterm?: Terminal
+  socket?: AttachAddon
+  options: WebTerminalOptions
 
-  constructor(options?: ITerminalOptions) {
-    super({
-      cursorBlink: true,
-      // fontFamily: "'Courier New', 'Courier', monospace",
-      // fontSize: 12,
-      // lineHeight: 1,
-      // theme: {
-      //   foreground: '#f0f0f0',
-      // },
+  constructor(options: WebTerminalOptions = {}) {
+    this.options = {
+      rendererType: 'webgl',
       ...options,
-    })
-
-    // fitAddon
-    const fitAddon = new FitAddon()
-    this.fitAddon = fitAddon
-    this.loadAddon(fitAddon)
-
-    // web link addon
-    this.loadAddon(new WebLinksAddon())
-
-    // renderer
-    if (detectWebGLContext()) {
-      console.log('render xterm use webgl')
-      const webglAddon = new WebglAddon()
-      webglAddon.onContextLoss((e) => {
-        console.error('something error: lost webgl context', e)
-        webglAddon.dispose()
-      })
-      this.loadAddon(webglAddon)
-    } else {
-      console.log('render xterm use canvas')
-      this.loadAddon(new CanvasAddon())
     }
   }
 
@@ -79,41 +60,132 @@ export class WebTerminal extends Terminal {
       element = el
     }
 
-    // 初始化
-    this.open(element)
+    this.xterm = new Terminal({
+      cursorBlink: true,
+      ...this.options.xtermOptions,
+    })
+
+    // load addon
+    this.xterm.loadAddon(this.fitAddon)
+    this.xterm.loadAddon(new WebLinksAddon())
+
+    // 初始化渲染器
+    this.initRenderer()
+    // 渲染
+    this.xterm.open(element)
+    this.fit()
+
     // 实现 fit resize 能力
     this.fitWindowResize()
+
+    return this.xterm
   }
 
-  public fitWindowResize() {
-    this.fit()
+  private initRenderer() {
+    const { rendererType } = this.options
+
+    const disposeCanvasRenderer = () => {
+      try {
+        this.canvasAddon?.dispose()
+      } catch {
+        // ignore
+      }
+      this.canvasAddon = undefined
+    }
+    const disposeWebglRenderer = () => {
+      try {
+        this.webglAddon?.dispose()
+      } catch {
+        // ignore
+      }
+      this.webglAddon = undefined
+    }
+    const enableCanvasRenderer = () => {
+      if (this.canvasAddon) return
+      this.canvasAddon = new CanvasAddon()
+      disposeWebglRenderer()
+      try {
+        this.loadAddon(this.canvasAddon)
+        log.info('render xterm use canvas')
+      } catch (e) {
+        log.warn('canvas renderer could not be loaded, falling back to dom renderer', e)
+        disposeCanvasRenderer()
+      }
+    }
+    const enableWebglRenderer = () => {
+      if (this.webglAddon) return
+      this.webglAddon = new WebglAddon()
+      disposeCanvasRenderer()
+      try {
+        if (detectWebGLContext()) {
+          this.webglAddon.onContextLoss((e) => {
+            log.error('something error: lost webgl context', e)
+            this.webglAddon?.dispose()
+          })
+          this.loadAddon(this.webglAddon)
+          log.info('render xterm use webgl')
+        } else {
+          throw new Error('not support webgl')
+        }
+      } catch (e) {
+        log.warn('WebGL renderer could not be loaded, falling back to canvas renderer', e)
+        disposeWebglRenderer()
+        enableCanvasRenderer()
+      }
+    }
+
+    switch (rendererType) {
+      case 'canvas':
+        enableCanvasRenderer()
+        break
+      case 'webgl':
+        enableWebglRenderer()
+        break
+      case 'dom':
+        disposeWebglRenderer()
+        disposeCanvasRenderer()
+        log.info('render xterm use dom')
+        break
+      default:
+        break
+    }
+  }
+
+  fit = () => {
+    try {
+      this.fitAddon.fit()
+    } catch (e) {
+      log.error('fit error', e)
+    }
+  }
+
+  // 添加 window resize 事件
+  fitWindowResize() {
     window.addEventListener('resize', this.resizeCb)
-  }
-
-  public connectSocket(url: string, protocols?: string | string[], options?: AttachAddonOptions) {
-    const socket = new AttachAddon(url, protocols, options)
-
-    // loadAddon 的时候调用 addon 的 activate, 传入 terminal
-    this.loadAddon(socket)
-
-    this.socket = socket
-
-    return socket
   }
 
   private resizeCb = debounce(() => {
     this.fit()
   }, 500)
 
-  public fit = () => {
-    try {
-      this.fitAddon.fit()
-    } catch (e) {
-      console.error('fit error', e)
-    }
+  loadAddon(addon: ITerminalAddon) {
+    this.xterm?.loadAddon(addon)
   }
 
-  public destroySocket(manualClose = false) {
+  write(data: string | Uint8Array) {
+    this.xterm?.write(data)
+  }
+
+  connectSocket(url: string, protocols?: string | string[], options?: AttachAddonOptions) {
+    const attachAddon = new AttachAddon(url, protocols, options)
+
+    // loadAddon 的时候调用 addon 的 activate, 传入 terminal
+    this.loadAddon(attachAddon)
+
+    return (this.socket = attachAddon)
+  }
+
+  destroySocket(manualClose = false) {
     if (this.socket) {
       // 前端手动关闭
       if (manualClose) this.socket.close(1000, 'frontend close')
@@ -122,7 +194,7 @@ export class WebTerminal extends Terminal {
     }
   }
 
-  public destroy() {
+  destroy() {
     // 前端手动关闭
     if (this.socket) {
       this.socket.close(1000, 'frontend close')
@@ -130,6 +202,6 @@ export class WebTerminal extends Terminal {
       this.socket = undefined
     }
     window.removeEventListener('resize', this.resizeCb)
-    this.dispose()
+    this.xterm?.dispose()
   }
 }

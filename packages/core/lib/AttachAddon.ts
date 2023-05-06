@@ -1,5 +1,5 @@
 import { Terminal, IDisposable, ITerminalAddon } from 'xterm'
-import { addSocketListener } from './utils'
+import { addSocketListener, log } from './utils'
 
 export type MessageDataMap = {
   resize: {
@@ -20,14 +20,14 @@ export type SendMessageMapper = (
 export type OnmessageMapper = (data: ArrayBuffer | string) => string | Uint8Array | undefined
 
 export interface AttachAddonOptions {
-  processMsgSendToServer?: SendMessageMapper
+  processMsgToServer?: SendMessageMapper
   processMsgFromServer?: OnmessageMapper
 }
 
 export class AttachAddon extends WebSocket implements ITerminalAddon {
   private _disposables: IDisposable[] = []
 
-  private _processMsgSendToServer: SendMessageMapper = (type: MessageType, data?: any) => {
+  private _processSendToServer: SendMessageMapper = (type: MessageType, data?: any) => {
     switch (type) {
       case 'data':
         return data
@@ -60,11 +60,11 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     // always set binary type to arraybuffer, we do not handle blobs
     this.binaryType = 'arraybuffer'
 
-    this._processMsgSendToServer = options?.processMsgSendToServer ?? this._processMsgSendToServer
+    this._processSendToServer = options?.processMsgToServer ?? this._processSendToServer
     this._processMsgFromServer = options?.processMsgFromServer ?? this._processMsgFromServer
   }
 
-  public activate(terminal: Terminal): void {
+  activate(terminal: Terminal): void {
     // 建立连接后获取焦点
     this.addListener('open', () => {
       terminal.focus()
@@ -73,8 +73,11 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     // 处理消息
     this.addListener('message', (ev) => {
       const data: ArrayBuffer | string = ev.data
+      log.info(`received message: `, data)
       const message = this._processMsgFromServer(data)
-      if (message) terminal.write(message)
+      if (message) {
+        terminal.write(message)
+      }
     })
     this.attachTerminal(terminal)
 
@@ -82,24 +85,27 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     this.addListener('error', () => this.dispose())
   }
 
-  public attachTerminal(terminal: Terminal) {
+  attachTerminal(terminal: Terminal) {
     this._disposables.push(terminal.onData((data) => this.sendMessage('data', data)))
     this._disposables.push(terminal.onBinary((data) => this.sendMessage('binary', data)))
     this._disposables.push(terminal.onResize((data) => this.sendMessage('resize', data)))
   }
 
-  public addListener<K extends keyof WebSocketEventMap>(type: K, handler: (this: WebSocket, ev: WebSocketEventMap[K]) => any) {
+  addListener<K extends keyof WebSocketEventMap>(type: K, handler: (this: WebSocket, ev: WebSocketEventMap[K]) => any) {
     this._disposables.push(addSocketListener(this, type, handler))
   }
 
-  public sendMessage<T extends MessageType>(type: T, data?: MessageDataMap[T]) {
+  sendMessage<T extends MessageType>(type: T, data?: MessageDataMap[T]) {
     if (this._checkOpenSocket()) {
-      const message = this._processMsgSendToServer(type, data)
-      if (message) this.send(message)
+      const message = this._processSendToServer(type, data)
+      if (message) {
+        log.info(`send ${type} message: `, message)
+        this.send(message)
+      }
     }
   }
 
-  public dispose(): void {
+  dispose(): void {
     for (const d of this._disposables) {
       d.dispose()
     }

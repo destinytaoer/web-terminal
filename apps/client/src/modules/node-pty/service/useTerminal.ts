@@ -4,38 +4,39 @@ import { v4 as uuid } from 'uuid'
 import { Logger, WebTerminal } from 'core'
 import { generateMessage, processMessageFromServer } from './config'
 
-const log = new Logger('WebTerminal')
+const log = new Logger('WebTerminal', 'dev')
 const url = 'ws://127.0.0.1:3001/node-pty'
 export const useTerminal = () => {
   const terminalEl = useRef<HTMLDivElement>(null)
   const terminal = useCreation(() => {
-    return new WebTerminal({
-      fontSize: 20,
-    })
+    return new WebTerminal()
   }, [])
 
   // terminal 初始化
-  useEffect(() => {
-    if (terminalEl.current) {
-      terminal.init(terminalEl.current)
-      return () => {
-        terminal.destroy()
-      }
-    }
-  }, [])
+  // useEffect(() => {
+  //   if (terminalEl.current) {
+  //     log.info('init terminal')
+  //     terminal.init(terminalEl.current)
+  //     return () => {
+  //       log.info('destroy terminal')
+  //       terminal.destroy()
+  //     }
+  //   }
+  // }, [])
 
   useEffect(() => {
     if (url) {
       const id = uuid()
-      const cols = terminal.cols
-      const rows = terminal.rows
-      const urlWithQuery = `${url}?id=${id}&cols=${cols}&rows=${rows}`
+      log.info('init terminal')
+      const xterm = terminal.init(terminalEl.current)
 
-      terminal.clear()
+      const cols = xterm.cols
+      const rows = xterm.rows
+      const urlWithQuery = `${url}?id=${id}&cols=${cols}&rows=${rows}`
 
       log.info('connect socket', urlWithQuery)
       const socket = terminal.connectSocket(urlWithQuery, [], {
-        processMsgSendToServer: generateMessage,
+        processMsgToServer: generateMessage,
         processMsgFromServer: processMessageFromServer,
       })
 
@@ -60,7 +61,8 @@ export const useTerminal = () => {
 
       return () => {
         if (timer) clearInterval(timer)
-        terminal.destroySocket(true)
+        log.info('destroy terminal')
+        terminal.destroy()
       }
     }
   }, [url])
