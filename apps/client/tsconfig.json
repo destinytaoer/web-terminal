@@ -3,6 +3,7 @@
     "tsconfig/react-library.json"
   ],
   "compilerOptions": {
+    "jsx": "react-jsx",
     "baseUrl": "./",
     "paths": {
       "@/*": [

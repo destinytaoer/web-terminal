@@ -4,7 +4,7 @@ import NotFoundPage from './404'
 import { GlobalLayout } from '@/app/layout'
 import { Home } from '@/modules/home'
 import { NodePty } from '@/modules/node-pty'
-import { ExecBase64 } from '@/modules/k8s'
+import { ExecBase64, ExecBinary } from '@/modules/k8s'
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +23,10 @@ export const router = createBrowserRouter([
       {
         path: '/exec-base64',
         element: <ExecBase64 />,
+      },
+      {
+        path: '/exec-binary',
+        element: <ExecBinary />,
       },
       { path: '*', element: <NotFoundPage /> },
     ],
