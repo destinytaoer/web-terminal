@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
 import { v4 as uuid } from 'uuid'
 import { Logger, WebTerminal } from 'core'
-import { generateMessage, processMessageFromServer } from './config'
+import { processMessageToServer, processMessageFromServer } from './config'
 
 const log = new Logger('WebTerminal', 'dev')
 const url = 'ws://127.0.0.1:3001/node-pty'
@@ -36,8 +36,8 @@ export const useTerminal = () => {
 
       log.info('connect socket', urlWithQuery)
       const socket = terminal.connectSocket(urlWithQuery, [], {
-        processMsgToServer: generateMessage,
-        processMsgFromServer: processMessageFromServer,
+        processMessageToServer,
+        processMessageFromServer,
       })
 
       // 添加心跳

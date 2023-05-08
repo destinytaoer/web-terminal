@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
 import { WebTerminal } from 'core'
-import { generateMessage, K8sWebsocketProtocol, processMessageFromServer } from './config'
+import { processMessageToServer, K8sWebsocketProtocol, processMessageFromServer } from './config'
 
 const url = 'wss://xxx/exec'
 const token = 'NAz0nAI34X1UpS5lILOKbK1fO2I_3Qh7UVKq2-kt_3o.650omNloyCWKfLWrlZFDGtsVLLi02evhjlxqLQgDfX8'
@@ -30,8 +30,8 @@ export const useTerminal = () => {
       const urlWithQuery = `${url}?token=${token}&columns=${cols}&lines=${rows}`
 
       const socket = terminal.connectSocket(urlWithQuery, [K8sWebsocketProtocol], {
-        processMsgToServer: generateMessage,
-        processMsgFromServer: processMessageFromServer,
+        processMessageToServer,
+        processMessageFromServer,
       })
 
       // 添加心跳

@@ -1,4 +1,4 @@
-import { IDisposable, ITerminalAddon, ITerminalOptions, Terminal } from 'xterm'
+import { ITerminalAddon, ITerminalOptions, Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { WebLinksAddon } from 'xterm-addon-web-links'
 import { CanvasAddon } from 'xterm-addon-canvas'
@@ -164,8 +164,21 @@ export class WebTerminal {
     window.addEventListener('resize', this.resizeCb)
   }
 
+  // 是否支持 resize
+  private resizeFlag = true
+
+  suspendResize() {
+    this.resizeFlag = false
+  }
+
+  resumeResize() {
+    this.resizeFlag = true
+  }
+
   private resizeCb = debounce(() => {
-    this.fit()
+    if (this.resizeFlag) {
+      this.fit()
+    }
   }, 500)
 
   loadAddon(addon: ITerminalAddon) {
@@ -174,6 +187,10 @@ export class WebTerminal {
 
   write(data: string | Uint8Array) {
     this.xterm?.write(data)
+  }
+
+  focus() {
+    this.xterm?.focus()
   }
 
   connectSocket(url: string, protocols?: string | string[], options?: AttachAddonOptions) {

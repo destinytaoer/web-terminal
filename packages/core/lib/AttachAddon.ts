@@ -1,40 +1,46 @@
-import { Terminal, IDisposable, ITerminalAddon } from 'xterm'
+import { IDisposable, ITerminalAddon, Terminal } from 'xterm'
 import { addSocketListener, log } from './utils'
 
-export type MessageDataMap = {
-  resize: {
-    cols: number
-    rows: number
-  }
-  data: string
-  binary: string
-  heartbeat: string
-}
-export type MessageType = keyof MessageDataMap
+export type MessageType = 'data' | 'binary' | 'resize' | 'heartbeat'
 
-export type SendMessageMapper = (
-  type: MessageType,
-  data?: MessageDataMap[MessageType],
-) => string | ArrayBufferLike | Blob | ArrayBufferView | undefined
+export type MessageData =
+  | { type: 'data'; content: string }
+  | { type: 'binary'; content: string }
+  | {
+      type: 'heartbeat'
+      content?: any
+    }
+  | {
+      type: 'resize'
+      content: {
+        cols: number
+        rows: number
+      }
+    }
+  | { type: string; content: any }
 
-export type OnmessageMapper = (data: ArrayBuffer | string) => string | Uint8Array | undefined
+export type ProcessMessageToServerFn = (data: MessageData) => string | ArrayBufferLike | Blob | ArrayBufferView | undefined
+
+export type ProcessMessageFromServerFn = (data: ArrayBuffer | string) => string | Uint8Array | undefined
 
 export interface AttachAddonOptions {
-  processMsgToServer?: SendMessageMapper
-  processMsgFromServer?: OnmessageMapper
+  processMessageToServer?: ProcessMessageToServerFn
+  processMessageFromServer?: ProcessMessageFromServerFn
 }
 
 export class AttachAddon extends WebSocket implements ITerminalAddon {
   private _disposables: IDisposable[] = []
 
-  private _processSendToServer: SendMessageMapper = (type: MessageType, data?: any) => {
+  private processMessageToServer: ProcessMessageToServerFn = (data: MessageData) => {
+    const { type, content } = data
+
     switch (type) {
       case 'data':
-        return data
+        return content
       case 'binary':
-        const buffer = new Uint8Array(data.length)
-        for (let i = 0; i < data.length; ++i) {
-          buffer[i] = data.charCodeAt(i) & 255
+        const buffer = new Uint8Array(content.length)
+        for (let i = 0; i < content.length; ++i) {
+          buffer[i] = content.charCodeAt(i) & 255
         }
         return buffer
       default:
@@ -42,7 +48,7 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     }
   }
 
-  private _processMsgFromServer: OnmessageMapper = (data: ArrayBuffer | string) => {
+  private processMessageFromServer: ProcessMessageFromServerFn = (data: ArrayBuffer | string) => {
     try {
       if (typeof data === 'string') {
         const obj = JSON.parse(data)
@@ -60,8 +66,8 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     // always set binary type to arraybuffer, we do not handle blobs
     this.binaryType = 'arraybuffer'
 
-    this._processSendToServer = options?.processMsgToServer ?? this._processSendToServer
-    this._processMsgFromServer = options?.processMsgFromServer ?? this._processMsgFromServer
+    this.processMessageToServer = options?.processMessageToServer ?? this.processMessageToServer
+    this.processMessageFromServer = options?.processMessageFromServer ?? this.processMessageFromServer
   }
 
   activate(terminal: Terminal): void {
@@ -74,7 +80,7 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     this.addListener('message', (ev) => {
       const data: ArrayBuffer | string = ev.data
       log.info(`received message: `, data)
-      const message = this._processMsgFromServer(data)
+      const message = this.processMessageFromServer(data)
       if (message) {
         terminal.write(message)
       }
@@ -95,9 +101,9 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     this._disposables.push(addSocketListener(this, type, handler))
   }
 
-  sendMessage<T extends MessageType>(type: T, data?: MessageDataMap[T]) {
+  sendMessage<T extends MessageType>(type: T, data?: any) {
     if (this._checkOpenSocket()) {
-      const message = this._processSendToServer(type, data)
+      const message = this.processMessageToServer({ type, content: data })
       if (message) {
         log.info(`send ${type} message: `, message)
         this.send(message)

@@ -1,4 +1,4 @@
-import { MessageDataMap, MessageType } from 'core'
+import { MessageData, MessageType } from 'core'
 
 export const K8sWebsocketProtocol = 'base64.channel.k8s.io'
 export const K8sExecMsgChannel = {
@@ -217,19 +217,20 @@ export const util = {
 }
 
 // 生成发送给服务端的消息
-export function generateMessage(type: MessageType, data?: MessageDataMap[MessageType]) {
+export function processMessageToServer(data: MessageData) {
+  const { type, content } = data
   switch (type) {
     case 'resize':
-      const { cols, rows } = data as any
+      const { cols, rows } = content as any
       const msg = JSON.stringify({
         Width: cols,
         Height: rows,
       })
       return K8sExecMsgChannel.Resize + util.base64.encode(msg)
     case 'data':
-      const input = data as string
-      return K8sExecMsgChannel.StdIn + util.base64.encode(input)
     case 'binary':
+      const input = content as string
+      return K8sExecMsgChannel.StdIn + util.base64.encode(input)
       break
     case 'heartbeat':
       return K8sExecMsgChannel.StdIn
