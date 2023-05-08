@@ -11,6 +11,7 @@
   "dependencies": {
     "ahooks": "^3.7.6",
     "antd": "^5.4.3",
+    "buffer": "^6.0.3",
     "classnames": "^2.3.2",
     "core": "workspace:*",
     "lodash": "^4.17.21",
