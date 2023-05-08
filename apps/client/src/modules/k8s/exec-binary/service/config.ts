@@ -7,11 +7,11 @@ export const k8s = {
     binary: 'channel.k8s.io',
   },
   messageChannel: {
-    StdIn: '0',
-    StdOut: '1',
-    StdError: '2',
-    ServiceError: '3',
-    Resize: '4',
+    StdIn: 0,
+    StdOut: 1,
+    StdError: 2,
+    ServiceError: 3,
+    Resize: 4,
   },
 }
 
@@ -25,7 +25,7 @@ export function processMessageToServer(data: MessageData) {
         Width: cols,
         Height: rows,
       })
-      const type = Buffer.from(`0${k8s.messageChannel.Resize}`, 'hex')
+      const type = Uint8Array.of(k8s.messageChannel.Resize)
       const msgBuffer = Buffer.from(msg, 'utf8')
       return Buffer.concat([type, msgBuffer])
       // return k8s.messageChannel.Resize + util.base64.encode(msg)
@@ -33,19 +33,13 @@ export function processMessageToServer(data: MessageData) {
     case 'data':
     case 'binary': {
       const input = content
-      if (typeof input === 'string') {
-        const type = Buffer.from(`0${k8s.messageChannel.StdIn}`, 'hex')
-        const msgBuffer = Buffer.from(input, 'utf8')
-        return Buffer.concat([type, msgBuffer])
-      } else {
-        const type = Buffer.from(`0${k8s.messageChannel.StdIn}`, 'hex')
-        const msgBuffer = Buffer.from(input, 'utf8')
-        return Buffer.concat([type, msgBuffer])
-      }
+      const type = Uint8Array.of(k8s.messageChannel.StdIn)
+      const msgBuffer = Buffer.from(input, 'utf8')
+      return Buffer.concat([type, msgBuffer])
       // return k8s.messageChannel.StdIn + util.base64.encode(input)
     }
     case 'heartbeat': {
-      return Buffer.from(`0${k8s.messageChannel.StdIn}`, 'hex')
+      return Uint8Array.of(k8s.messageChannel.StdIn)
     }
   }
   return ''
@@ -54,31 +48,31 @@ export function processMessageToServer(data: MessageData) {
 // 处理服务端消息
 export function processMessageFromServer(data: string | ArrayBuffer) {
   if (typeof data === 'string') {
-    const base64Msg = data.slice(1)
-    const type = data.slice(0, 1)
-    const msg = util.base64.decode(base64Msg).toString()
-    switch (type) {
-      case k8s.messageChannel.StdOut:
-      case k8s.messageChannel.StdError:
-        return msg
-      case k8s.messageChannel.ServiceError:
-        const reg = /exit code ([0-9]+)/
-        const [, exitCode] = msg.match(reg) ?? []
-        switch (exitCode) {
-          case '137':
-            console.error('exit code 137: pod terminated')
-            return ''
-          case undefined:
-            console.error(msg)
-            return ''
-          default:
-            console.error(`exit code ${exitCode}: ${msg}`)
-            return ''
-        }
-    }
+    // const base64Msg = data.slice(1)
+    // const type = data.slice(0, 1)
+    // const msg = util.base64.decode(base64Msg).toString()
+    // switch (type) {
+    //   case k8s.messageChannel.StdOut:
+    //   case k8s.messageChannel.StdError:
+    //     return msg
+    //   case k8s.messageChannel.ServiceError:
+    //     const reg = /exit code ([0-9]+)/
+    //     const [, exitCode] = msg.match(reg) ?? []
+    //     switch (exitCode) {
+    //       case '137':
+    //         console.error('exit code 137: pod terminated')
+    //         return ''
+    //       case undefined:
+    //         console.error(msg)
+    //         return ''
+    //       default:
+    //         console.error(`exit code ${exitCode}: ${msg}`)
+    //         return ''
+    //     }
+    // }
   } else {
     const buffer = Buffer.from(data)
-    const type = buffer.slice(0, 1).toString('hex')[1]
+    const type = buffer[0]
     const content = buffer.slice(1).toString('utf8')
     switch (type) {
       case k8s.messageChannel.StdOut:
