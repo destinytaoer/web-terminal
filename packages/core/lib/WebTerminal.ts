@@ -1,3 +1,4 @@
+import { debounce } from 'lodash'
 import { ITerminalAddon, ITerminalOptions, Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { WebLinksAddon } from 'xterm-addon-web-links'
@@ -5,7 +6,6 @@ import { CanvasAddon } from 'xterm-addon-canvas'
 import { WebglAddon } from 'xterm-addon-webgl'
 import { AttachAddon, AttachAddonOptions } from './AttachAddon'
 import { detectWebGLContext, log } from './utils'
-import { debounce } from 'lodash'
 
 export interface WebTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'
@@ -35,11 +35,15 @@ export interface WebTerminalOptions {
  */
 export class WebTerminal {
   private fitAddon = new FitAddon()
+
   private webglAddon?: WebglAddon
+
   private canvasAddon?: CanvasAddon
 
   xterm?: Terminal
+
   socket?: AttachAddon
+
   options: WebTerminalOptions
 
   constructor(options: WebTerminalOptions = {}) {
@@ -76,7 +80,8 @@ export class WebTerminal {
     this.fit()
 
     // 实现 fit resize 能力
-    this.fitWindowResize()
+    // 放置到业务中自行添加
+    // this.fitWindowResize()
 
     return this.xterm
   }
@@ -200,15 +205,6 @@ export class WebTerminal {
     this.loadAddon(attachAddon)
 
     return (this.socket = attachAddon)
-  }
-
-  destroySocket(manualClose = false) {
-    if (this.socket) {
-      // 前端手动关闭
-      if (manualClose) this.socket.close(1000, 'frontend close')
-      this.socket.dispose()
-      this.socket = undefined
-    }
   }
 
   destroy() {

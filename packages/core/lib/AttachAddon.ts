@@ -31,6 +31,8 @@ export interface AttachAddonOptions {
 export class AttachAddon extends WebSocket implements ITerminalAddon {
   private _disposables: IDisposable[] = []
 
+  private terminal?: Terminal
+
   private processMessageToServer: ProcessMessageToServerFn = (data: MessageData) => {
     const { type, content } = data
 
@@ -62,7 +64,7 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
 
   constructor(url: string, protocols?: string | string[], options?: AttachAddonOptions) {
     super(url, protocols)
-    // this._socket = socket
+
     // always set binary type to arraybuffer, we do not handle blobs
     this.binaryType = 'arraybuffer'
 
@@ -71,24 +73,21 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
   }
 
   activate(terminal: Terminal): void {
-    // 建立连接后获取焦点
-    this.addListener('open', () => {
-      terminal.focus()
-    })
+    this.terminal = terminal
 
-    // 处理消息
-    this.addListener('message', (ev) => {
-      const data: ArrayBuffer | string = ev.data
-      const message = this.processMessageFromServer(data)
-      if (message) {
-        log.info(`received message: `, message)
-        terminal.write(message)
-      }
-    })
+    // 处理 server 消息
+    this.attachSocket(this)
+
+    // 处理 client 消息
     this.attachTerminal(terminal)
+  }
 
-    this.addListener('close', () => this.dispose())
-    this.addListener('error', () => this.dispose())
+  attachSocket(socket: WebSocket) {
+    // 建立连接后获取焦点
+    // this._disposables.push(addSocketListener(socket, 'open', () => this.terminal?.focus()))
+    this._disposables.push(addSocketListener(socket, 'message', (ev) => this.onMessage(ev.data)))
+    this._disposables.push(addSocketListener(socket, 'close', () => this.dispose()))
+    this._disposables.push(addSocketListener(socket, 'error', () => this.dispose()))
   }
 
   attachTerminal(terminal: Terminal) {
@@ -97,8 +96,12 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     this._disposables.push(terminal.onResize((data) => this.sendMessage('resize', data)))
   }
 
-  addListener<K extends keyof WebSocketEventMap>(type: K, handler: (this: WebSocket, ev: WebSocketEventMap[K]) => any) {
-    this._disposables.push(addSocketListener(this, type, handler))
+  onMessage(data: string | ArrayBuffer) {
+    const message = this.processMessageFromServer(data)
+    log.info(`received message: `, message)
+    if (message) {
+      this.terminal?.write(message)
+    }
   }
 
   sendMessage<T extends MessageType>(type: T, data?: any) {

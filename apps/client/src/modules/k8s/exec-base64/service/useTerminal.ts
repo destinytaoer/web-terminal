@@ -24,6 +24,7 @@ export const useTerminal = () => {
   useEffect(() => {
     if (url) {
       const xterm = terminal.init(terminalEl.current)
+      terminal.fitWindowResize()
 
       const cols = xterm.cols
       const rows = xterm.rows
@@ -37,6 +38,7 @@ export const useTerminal = () => {
       // 添加心跳
       let timer: number | undefined
       socket.addEventListener('open', () => {
+        terminal.focus()
         timer = window.setInterval(function () {
           socket?.sendMessage('heartbeat')
         }, 30 * 1000)

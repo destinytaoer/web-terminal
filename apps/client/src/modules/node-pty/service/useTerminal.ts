@@ -29,6 +29,7 @@ export const useTerminal = () => {
       const id = uuid()
       log.info('init terminal')
       const xterm = terminal.init(terminalEl.current)
+      terminal.fitWindowResize()
 
       const cols = xterm.cols
       const rows = xterm.rows
@@ -44,6 +45,7 @@ export const useTerminal = () => {
       let timer: number | undefined
       socket.addEventListener('open', () => {
         log.success('socket open')
+        terminal.focus()
         timer = window.setInterval(function () {
           socket?.sendMessage('heartbeat')
         }, 30 * 1000)
