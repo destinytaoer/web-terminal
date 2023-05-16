@@ -119,10 +119,12 @@ export class WebTerminal {
     }
     const enableWebglRenderer = () => {
       if (this.webglAddon) return
-      this.webglAddon = new WebglAddon()
       disposeCanvasRenderer()
       try {
+        // https://github.com/xtermjs/xterm.js/issues/3357
+        // safari < 16 报错 已调整到 WebglAddon 的 constructor 中
         if (detectWebGLContext()) {
+          this.webglAddon = new WebglAddon()
           this.webglAddon.onContextLoss((e) => {
             log.error('something error: lost webgl context', e)
             this.webglAddon?.dispose()
