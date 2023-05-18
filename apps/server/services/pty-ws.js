@@ -45,10 +45,10 @@ class PtyWs {
     })
   }
 
-  createTerminal({ cols, rows, id }) {
-    console.log(cols, rows)
+  createTerminal({ cols, rows, id, shell }) {
+    console.log(shell, cols, rows)
 
-    const terminal = new Terminal([], {
+    const terminal = new Terminal(shell, [], {
       cols: Number(cols),
       rows: Number(rows),
     })

@@ -17,7 +17,7 @@ export const router = createBrowserRouter([
         element: <Home />,
       },
       {
-        path: '/node-pty',
+        path: '/node-pty/:shell',
         element: <NodePty />,
       },
       {
