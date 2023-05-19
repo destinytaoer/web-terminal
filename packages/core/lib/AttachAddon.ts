@@ -26,12 +26,11 @@ export type ProcessMessageFromServerFn = (data: ArrayBuffer | string) => string 
 export interface AttachAddonOptions {
   processMessageToServer?: ProcessMessageToServerFn
   processMessageFromServer?: ProcessMessageFromServerFn
+  writer: (data: string | Uint8Array) => void
 }
 
 export class AttachAddon extends WebSocket implements ITerminalAddon {
   private _disposables: IDisposable[] = []
-
-  private terminal?: Terminal
 
   private processMessageToServer: ProcessMessageToServerFn = (data: MessageData) => {
     const { type, content } = data
@@ -62,7 +61,9 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     return typeof data === 'string' ? data : new Uint8Array(data)
   }
 
-  constructor(url: string, protocols?: string | string[], options?: AttachAddonOptions) {
+  private writer: (data: string | Uint8Array) => void
+
+  constructor(url: string, protocols: string | string[], options: AttachAddonOptions) {
     super(url, protocols)
 
     // always set binary type to arraybuffer, we do not handle blobs
@@ -70,11 +71,10 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
 
     this.processMessageToServer = options?.processMessageToServer ?? this.processMessageToServer
     this.processMessageFromServer = options?.processMessageFromServer ?? this.processMessageFromServer
+    this.writer = options.writer
   }
 
   activate(terminal: Terminal): void {
-    this.terminal = terminal
-
     // 处理 server 消息
     this.attachSocket(this)
 
@@ -100,7 +100,7 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     const message = this.processMessageFromServer(data)
     log.info(`received message: `, message)
     if (message) {
-      this.terminal?.write(message)
+      this.writer(message)
     }
   }
 
