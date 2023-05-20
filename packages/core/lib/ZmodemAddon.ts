@@ -67,8 +67,14 @@ export class ZmodemAddon implements ITerminalAddon {
     const { reset, zmodemDetect } = this
     this.session = null
     this.sentry = new Zmodem.Sentry({
-      to_terminal: (octets: any) => writer(new Uint8Array(octets)),
-      sender: (octets: any) => sender(new Uint8Array(octets)),
+      to_terminal: (octets: any) => {
+        log.info('zmodem to terminal', octets)
+        writer(new Uint8Array(octets))
+      },
+      sender: (octets: any) => {
+        log.info('sender')
+        sender(new Uint8Array(octets))
+      },
       on_retract: () => reset(),
       on_detect: (detection: any) => zmodemDetect(detection),
     })
@@ -90,11 +96,18 @@ export class ZmodemAddon implements ITerminalAddon {
     this.session = detection.confirm()
     this.session.on('session_end', () => this.reset())
 
+    log.info('detection', detection)
+    log.info('type', this.session.type)
+
     if (this.session.type === 'send') {
       this.options.onSend()
     } else {
       receiveFile()
     }
+  }
+
+  public closeSession = () => {
+    this.session?._on_session_end()
   }
 
   public sendFile = (files: FileList) => {

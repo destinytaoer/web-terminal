@@ -98,7 +98,6 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
 
   onMessage(data: string | ArrayBuffer) {
     const message = this.processMessageFromServer(data)
-    log.info(`received message: `, message)
     if (message) {
       this.writer(message)
     }
@@ -108,7 +107,6 @@ export class AttachAddon extends WebSocket implements ITerminalAddon {
     if (this._checkOpenSocket()) {
       const message = this.processMessageToServer({ type, content: data })
       if (message) {
-        log.info(`send ${type} message: `, data)
         this.send(message)
       }
     }

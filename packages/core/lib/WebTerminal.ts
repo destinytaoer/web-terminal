@@ -103,6 +103,7 @@ export class WebTerminal {
     })
 
     if (this.options.enableZmodem) {
+      log.info('enable zmodem')
       this.loadZmodem(options?.onSend)
     }
     // loadAddon 的时候调用 addon 的 activate, 传入 terminal
@@ -176,7 +177,13 @@ export class WebTerminal {
         this.write(data)
       } else {
         // zmodemAddon 只消费二进制数据
-        this.zmodemAddon?.consume(data)
+        console.log('zmodem consume', data)
+        try {
+          this.zmodemAddon?.consume(data)
+        } catch (e) {
+          log.error('zmodem consume error', e)
+          this.zmodemAddon?.closeSession()
+        }
       }
     } else {
       this.write(data)
