@@ -1,4 +1,4 @@
-import { log, MessageData } from 'core'
+import { MessageData } from 'core'
 import { Buffer } from 'buffer/'
 
 export const k8s = {
@@ -34,8 +34,13 @@ export function processMessageToServer(data: MessageData) {
     case 'binary': {
       const input = content
       const type = Uint8Array.of(k8s.messageChannel.StdIn)
+      // if (typeof input === 'string') {
       const msgBuffer = Buffer.from(input, 'utf8')
       return Buffer.concat([type, msgBuffer])
+      // } else {
+      //   const msgBuffer = Buffer.from(input)
+      //   return Buffer.concat([type, msgBuffer])
+      // }
       // return k8s.messageChannel.StdIn + util.base64.encode(input)
     }
     case 'heartbeat': {
@@ -101,7 +106,7 @@ export function processMessageFromServer(data: string | ArrayBuffer) {
 // https://github.com/aws/aws-sdk-js/blob/master/lib/util.js
 export const util = {
   base64: {
-    encode: function encode64(string) {
+    encode: function encode64(string: string) {
       if (typeof string === 'number') {
         throw new Error('Cannot base64 encode number ' + string)
       }
@@ -111,7 +116,7 @@ export const util = {
       return util.buffer.toBuffer(string).toString('base64')
     },
 
-    decode: function decode64(string) {
+    decode: function decode64(string: string) {
       if (typeof string === 'number') {
         throw new Error('Cannot base64 decode number ' + string)
       }

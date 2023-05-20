@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
-import { WebTerminal } from 'core'
+import { log, WebTerminal } from 'core'
 import { processMessageToServer, k8s, processMessageFromServer } from './config'
 
 const url = 'wss://xxx/exec'
@@ -8,11 +8,13 @@ const token = 'NAz0nAI34X1UpS5lILOKbK1fO2I_3Qh7UVKq2-kt_3o.650omNloyCWKfLWrlZFDG
 export const useTerminal = () => {
   const terminalEl = useRef<HTMLDivElement>(null)
   const terminal = useCreation(() => {
-    return new WebTerminal({})
+    return new WebTerminal({
+      enableZmodem: true,
+    })
   }, [])
 
   useEffect(() => {
-    if (url) {
+    if (url && terminalEl.current) {
       const xterm = terminal.init(terminalEl.current)
       terminal.fitWindowResize()
 
@@ -23,6 +25,9 @@ export const useTerminal = () => {
       const socket = terminal.connectSocket(urlWithQuery, [k8s.protocol.binary], {
         processMessageToServer,
         processMessageFromServer,
+        onSend: () => {
+          log.success('on rz send')
+        },
       })
 
       // 添加心跳

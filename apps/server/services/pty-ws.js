@@ -17,9 +17,6 @@ class PtyWs {
     this.ws = new WebSocketServer({ server, path: '/node-pty' })
 
     this.ws.on('connection', (socket, request) => {
-      if (!request.url.includes('/node-pty')) {
-        return socket.close()
-      }
       this.online = this.ws._server._connections
       console.log(`socket当前在线${this.online}个连接`)
 
@@ -45,17 +42,19 @@ class PtyWs {
     })
   }
 
-  createTerminal({ cols, rows, id, shell }) {
-    console.log(shell, cols, rows)
+  createTerminal({ cols, rows, id, shell, useBinary }) {
+    console.log(shell, cols, rows, useBinary)
 
     const terminal = new Terminal(shell, [], {
       cols: Number(cols),
       rows: Number(rows),
+      encoding: null,
     })
 
     terminal.onData((data) => {
       // send data
-      this.sendMessageToClient(id, 'input', data)
+      // console.log('data', data)
+      this.sendMessageToClient(id, 'input', data, useBinary)
     })
 
     terminal.onExit((exitCode, signal) => {
@@ -68,6 +67,7 @@ class PtyWs {
     return terminal
   }
 
+  // 接收客户端数据
   processMessageFromClient(id, message) {
     const terminal = this.terminals[id]
     try {
@@ -84,6 +84,7 @@ class PtyWs {
             break
           case 'resize':
             const { cols, rows } = data?.content ?? {}
+            console.log('resize', cols, rows)
             terminal.resize(cols, rows)
             break
         }
@@ -94,15 +95,22 @@ class PtyWs {
   }
 
   // 发送客户端数据
-  sendMessageToClient(id, type, data) {
+  sendMessageToClient(id, type, data, useBinary) {
     const socket = this.getSocketById(id)
     if (this.isSocketReady(socket)) {
       switch (type) {
         case 'input':
-          socket.send(JSON.stringify({ type: 'input', content: data }))
+          if (useBinary) {
+            // socket.send(data)
+            // console.log(data.replace('\r', '@').replace('\x8a', '#').replace('\x11', '!'))
+            socket.send(data)
+          } else {
+            socket.send(JSON.stringify({ type: 'input', content: data }))
+          }
           break
         case 'heartbeat':
-          socket.send(JSON.stringify({ type: 'heartbeat' }))
+          // 去掉 heartbeat
+          // socket.send(JSON.stringify({ type: 'heartbeat' }))
           break
       }
     }

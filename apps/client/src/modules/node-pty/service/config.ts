@@ -1,4 +1,5 @@
-import { MessageData } from 'core'
+import { log, MessageData } from 'core'
+import { Buffer } from 'buffer/'
 
 export const K8sWebsocketProtocol = 'base64.channel.k8s.io'
 export const K8sExecMsgChannel = {
@@ -11,6 +12,7 @@ export const K8sExecMsgChannel = {
 
 // 生成发送给服务端的消息
 export function processMessageToServer(data: MessageData) {
+  log.warn('to server', data)
   const { type, content } = data
   switch (type) {
     case 'resize':
@@ -27,6 +29,7 @@ export function processMessageToServer(data: MessageData) {
 // 处理服务端消息
 export function processMessageFromServer(message: string | ArrayBuffer) {
   if (typeof message === 'string') {
+    log.error('error message', message)
     try {
       const data = JSON.parse(message)
       console.log('receive message', data)
@@ -37,6 +40,10 @@ export function processMessageFromServer(message: string | ArrayBuffer) {
     } catch (e) {
       return ''
     }
+  } else {
+    const buffer = Buffer.from(message)
+    const content = buffer.toString()
+    log.warn('from server', content)
+    return message
   }
-  return ''
 }
