@@ -94,7 +94,10 @@ export class ZmodemAddon implements ITerminalAddon {
 
     this.denier = () => detection.deny()
     this.session = detection.confirm()
-    this.session.on('session_end', () => this.reset())
+    this.session.on('session_end', () => {
+      console.log('session end')
+      this.reset()
+    })
 
     log.info('detection', detection)
     log.info('type', this.session.type)
@@ -107,7 +110,9 @@ export class ZmodemAddon implements ITerminalAddon {
   }
 
   public closeSession = () => {
-    this.session?._on_session_end()
+    console.log('close session')
+    this.session?.close()
+    this.denier?.()
   }
 
   public sendFile = (files: FileList) => {
@@ -122,15 +127,23 @@ export class ZmodemAddon implements ITerminalAddon {
   private receiveFile = () => {
     const { session, writeProgress } = this
 
+    console.log('receive file')
     session.on('offer', (offer: any) => {
+      console.log('offer', offer)
       offer.on('input', () => writeProgress(offer))
       offer
         .accept()
         .then((payloads: any) => {
+          console.log('payloads', payloads)
           const blob = new Blob(payloads, { type: 'application/octet-stream' })
           saveAs(blob, offer.get_details().name)
         })
         .catch(() => this.reset())
+    })
+
+    session.on('session_end', () => {
+      console.log('session end')
+      this.reset()
     })
 
     session.start()

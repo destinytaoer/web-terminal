@@ -1,5 +1,5 @@
 import { IDisposable, ITerminalAddon, Terminal } from 'xterm'
-import { addSocketListener, log } from './utils'
+import { addSocketListener } from './utils'
 
 export type MessageType = 'data' | 'binary' | 'resize' | 'heartbeat'
 

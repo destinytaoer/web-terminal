@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
 import { v4 as uuid } from 'uuid'
 import { Logger, WebTerminal } from 'core'
-import { processMessageToServer, processMessageFromServer } from './config'
+import { processMessageToServer, processMessageFromServer, uploadFile } from './config'
 import { useParams } from 'react-router-dom'
 
 const log = new Logger('WebTerminal', 'dev')
@@ -51,6 +51,14 @@ export const useTerminal = () => {
         processMessageFromServer,
         onSend() {
           log.success('onSend')
+          uploadFile()
+            .then((files) => {
+              log.success('prepare to upload files', files)
+            })
+            .catch(() => {
+              log.warn('cancel upload files')
+              terminal.cancelUploadFile()
+            })
         },
       })
 

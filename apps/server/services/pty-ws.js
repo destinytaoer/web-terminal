@@ -72,21 +72,30 @@ class PtyWs {
     const terminal = this.terminals[id]
     try {
       if (terminal) {
-        const data = JSON.parse(message.toString())
-        console.log('receive message from client', data)
-        switch (data?.type) {
-          case 'input':
-            console.log('write to terminal', data?.content)
-            terminal.write(data?.content ?? '')
-            break
-          case 'heartbeat':
-            this.sendMessageToClient(id, 'heartbeat')
-            break
-          case 'resize':
-            const { cols, rows } = data?.content ?? {}
-            console.log('resize', cols, rows)
-            terminal.resize(cols, rows)
-            break
+        try {
+          const data = JSON.parse(message.toString('utf8'))
+          console.log('receive message from client', data)
+          //
+          switch (data?.type) {
+            // case 'input':
+            //   console.log('write to terminal', data?.content)
+            //   terminal.write(data?.content ?? '')
+            //   break
+            case 'heartbeat':
+              this.sendMessageToClient(id, 'heartbeat')
+              break
+            case 'resize':
+              const { cols, rows } = data?.content ?? {}
+              console.log('resize', cols, rows)
+              terminal.resize(cols, rows)
+              break
+            default:
+              throw new Error('not json')
+          }
+        } catch (e) {
+          // 内容使用 buffer 形式传递
+          // console.log('receive buffer', new Buffer(message).toString('utf8'))
+          terminal.write(Buffer.from(message))
         }
       }
     } catch (e) {

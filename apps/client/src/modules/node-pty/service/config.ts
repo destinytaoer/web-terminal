@@ -19,7 +19,7 @@ export function processMessageToServer(data: MessageData) {
       return JSON.stringify({ type: 'resize', content })
     case 'data':
     case 'binary':
-      return JSON.stringify({ type: 'input', content })
+      return content
     case 'heartbeat':
       return JSON.stringify({ type: 'heartbeat' })
   }
@@ -29,7 +29,6 @@ export function processMessageToServer(data: MessageData) {
 // 处理服务端消息
 export function processMessageFromServer(message: string | ArrayBuffer) {
   if (typeof message === 'string') {
-    log.error('error message', message)
     try {
       const data = JSON.parse(message)
       console.log('receive message', data)
@@ -43,7 +42,27 @@ export function processMessageFromServer(message: string | ArrayBuffer) {
   } else {
     const buffer = Buffer.from(message)
     const content = buffer.toString()
-    log.warn('from server', content)
+    log.info('receive message from server', content)
     return message
   }
+}
+
+export function uploadFile() {
+  return new Promise((resolve, reject) => {
+    const inputDom = document.createElement('input')
+    inputDom.type = 'file'
+    inputDom.multiple = true
+
+    inputDom.addEventListener('change', (e) => {
+      const files = e.target?.files as FileList
+      console.log('files', files)
+      resolve(files)
+    })
+
+    inputDom.addEventListener('cancel', () => {
+      reject()
+    })
+
+    inputDom.click()
+  })
 }

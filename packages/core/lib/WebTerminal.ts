@@ -148,6 +148,14 @@ export class WebTerminal {
     this.xterm?.focus()
   }
 
+  cancelUploadFile() {
+    this.zmodemAddon?.closeSession()
+  }
+
+  sendFiles(files: FileList) {
+    this.zmodemAddon?.sendFile(files)
+  }
+
   private loadZmodem(onSend?: () => void) {
     const { sender, write } = this
     this.zmodemAddon = new ZmodemAddon({
