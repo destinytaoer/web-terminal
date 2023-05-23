@@ -53,7 +53,13 @@ export const useTerminal = () => {
           log.success('onSend')
           uploadFile()
             .then((files) => {
+              const file = files.item(0)
+              // if (!file || file.size > 200 * 1024 * 1024) {
+              //   log.error('over limit')
+              //   throw 'over limit'
+              // }
               log.success('prepare to upload files', files)
+              terminal.sendFiles(files)
             })
             .catch(() => {
               log.warn('cancel upload files')

@@ -1,16 +1,16 @@
 diff --git a/src/zsession.js b/src/zsession.js
-index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b954abc89 100644
+index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..3f1bf9c0dbdedf10b91e578c139c81216bd61907 100644
 --- a/src/zsession.js
 +++ b/src/zsession.js
 @@ -1,4 +1,4 @@
 -"use strict";
 +'use strict';
- 
+
  var Zmodem = module.exports;
- 
+
 @@ -11,137 +11,130 @@ var Zmodem = module.exports;
  Zmodem.DEBUG = false;
- 
+
  Object.assign(
 -    Zmodem,
 -    require("./encode"),
@@ -31,7 +31,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +  require('./zvalidation'),
 +  require('./zerror')
  );
- 
+
 -const
 -    //pertinent to this module
 -    KEEPALIVE_INTERVAL = 5000,
@@ -76,7 +76,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +  ZRINIT_FLAGS = [
 +    'CANFDX', //full duplex
 +    'CANOVIO', //overlap I/O
- 
+
 +    //lsz has a buffer overflow bug that shows itself when:
 +    //
 +    //  - 16-bit CRC is used, and
@@ -259,7 +259,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    return queue.length;
 +  }
  }
- 
+
  /**
 @@ -151,311 +144,303 @@ class _Eventer {
   * and Send subclasses.
@@ -364,7 +364,13 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +  constructor() {
 +    super();
 +    //if (!sender_func) throw "Need sender!";
- 
++
++    //this._first_header = first_header;
++    //this._sender = sender_func;
++    this._config = {};
++
++    //this._input = new ZInput();
+
 -    /**
 -     * Parse out a hex header from the given array.
 -     * If there’s a ZRQINIT or ZRINIT at the beginning,
@@ -384,31 +390,17 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -            hdr = Zmodem.Header.parse_hex(octets);
 -        }
 -        catch(e) {     //Don’t report since we aren’t in session
-+    //this._first_header = first_header;
-+    //this._sender = sender_func;
-+    this._config = {};
- 
++    this._input_buffer = [];
+
 -            //debug
 -            //console.warn("No hex header: ", e);
-+    //this._input = new ZInput();
- 
--            return;
--        }
-+    this._input_buffer = [];
- 
--        if (!hdr) return;
 +    //This is mostly for debugging.
 +    this._Add_event('receive');
 +    this._Add_event('garbage');
 +    this._Add_event('session_end');
 +  }
- 
--        switch (hdr.NAME) {
--            case "ZRQINIT":
--                //throw if ZCOMMAND
--                return new Zmodem.Session.Receive();
--            case "ZRINIT":
--                return new Zmodem.Session.Send(hdr);
+
+-            return;
 -        }
 +  /**
 +   * Returns the Session object’s role.
@@ -420,12 +412,22 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +  get_role() {
 +    return this.type;
 +  }
- 
--        //console.warn("Invalid first Zmodem header", hdr);
--    }
+
+-        if (!hdr) return;
 +  _trim_leading_garbage_until_header() {
 +    var garbage = Zmodem.Header.trim_leading_garbage(this._input_buffer);
- 
+
+-        switch (hdr.NAME) {
+-            case "ZRQINIT":
+-                //throw if ZCOMMAND
+-                return new Zmodem.Session.Receive();
+-            case "ZRINIT":
+-                return new Zmodem.Session.Send(hdr);
+-        }
+-
+-        //console.warn("Invalid first Zmodem header", hdr);
+-    }
+-
 -    /**
 -     * Sets the sender function that a Session object will use.
 -     *
@@ -443,7 +445,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +      }
      }
 +  }
- 
+
 -    /**
 -     * Whether the current Session has ended.
 -     *
@@ -460,11 +462,11 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -        this._before_consume(octets);
 +  _parse_and_consume_header() {
 +    this._trim_leading_garbage_until_header();
- 
+
 -        if (this._aborted) throw new Zmodem.Error('already_aborted');
 +    var new_header_and_crc = Zmodem.Header.parse(this._input_buffer);
 +    if (!new_header_and_crc) return;
- 
+
 -        if (!octets.length) return;
 -
 -        this._strip_and_enqueue_input(octets);
@@ -477,49 +479,45 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    if (Zmodem.DEBUG) {
 +      this._log_header('RECEIVED HEADER', new_header_and_crc[0]);
      }
- 
+
 -    /**
 -     * Whether the current Session has been `abort()`ed.
 -     *
 -     * @returns {boolean} The aborted state.
 -     */
 -    aborted() { return !!this._aborted }
-+    this._consume_header(new_header_and_crc[0]);
- 
+-
 -    /**
 -     * Not called directly.
 -     */
 -    constructor() {
 -        super();
 -        //if (!sender_func) throw "Need sender!";
-+    this._last_header_name = new_header_and_crc[0].NAME;
-+    this._last_header_crc = new_header_and_crc[1];
- 
++    this._consume_header(new_header_and_crc[0]);
+
 -        //this._first_header = first_header;
 -        //this._sender = sender_func;
 -        this._config = {};
++    this._last_header_name = new_header_and_crc[0].NAME;
++    this._last_header_crc = new_header_and_crc[1];
+
+-        //this._input = new ZInput();
 +    return new_header_and_crc[0];
 +  }
- 
--        //this._input = new ZInput();
+
+-        this._input_buffer = [];
 +  _log_header(label, header) {
 +    console.debug(this.type, label, header.NAME, header._bytes4.join());
 +  }
- 
--        this._input_buffer = [];
-+  _consume_header(new_header) {
-+    this._on_receive(new_header);
- 
+
 -        //This is mostly for debugging.
 -        this._Add_event("receive");
 -        this._Add_event("garbage");
 -        this._Add_event("session_end");
-+    var handler = this._next_header_handler && this._next_header_handler[new_header.NAME];
-+    if (!handler) {
-+      console.error('Unhandled header!', new_header, this._next_header_handler);
-+      throw new Zmodem.Error('Unhandled header: ' + new_header.NAME);
-     }
- 
+-    }
++  _consume_header(new_header) {
++    this._on_receive(new_header);
+
 -    /**
 -     * Returns the Session object’s role.
 -     *
@@ -541,77 +539,82 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -                );
 -            }
 -        }
--    }
--
++    var handler = this._next_header_handler && this._next_header_handler[new_header.NAME];
++    if (!handler) {
++      console.error('Unhandled header!', new_header, this._next_header_handler);
++      throw new Zmodem.Error('Unhandled header: ' + new_header.NAME);
+     }
+
 -    _parse_and_consume_header() {
 -        this._trim_leading_garbage_until_header();
--
++    this._next_header_handler = null;
+
 -        var new_header_and_crc = Zmodem.Header.parse(this._input_buffer);
 -        if (!new_header_and_crc) return;
--
++    handler.call(this, new_header);
++  }
+
 -        if (Zmodem.DEBUG) {
 -            this._log_header( "RECEIVED HEADER", new_header_and_crc[0] );
 -        }
-+    this._next_header_handler = null;
- 
--        this._consume_header(new_header_and_crc[0]);
-+    handler.call(this, new_header);
-+  }
- 
--        this._last_header_name = new_header_and_crc[0].NAME;
--        this._last_header_crc = new_header_and_crc[1];
 +  //TODO: strip out the abort sequence
 +  _check_for_abort_sequence() {
 +    var abort_at = Zmodem.ZMLIB.find_subarray(this._input_buffer, ABORT_SEQUENCE);
- 
--        return new_header_and_crc[0];
--    }
+
+-        this._consume_header(new_header_and_crc[0]);
 +    if (abort_at !== -1) {
 +      //TODO: expose this to caller
 +      this._input_buffer.splice(0, abort_at + ABORT_SEQUENCE.length);
- 
--    _log_header(label, header) {
--        console.debug(this.type, label, header.NAME, header._bytes4.join());
--    }
+
+-        this._last_header_name = new_header_and_crc[0].NAME;
+-        this._last_header_crc = new_header_and_crc[1];
 +      this._aborted = true;
- 
--    _consume_header(new_header) {
--        this._on_receive(new_header);
--
--        var handler = this._next_header_handler && this._next_header_handler[ new_header.NAME ];
--        if (!handler) {
--            console.error("Unhandled header!", new_header, this._next_header_handler);
--            throw new Zmodem.Error( "Unhandled header: " + new_header.NAME );
--        }
+
+-        return new_header_and_crc[0];
+-    }
 +      //TODO compare response here to lrzsz.
 +      this._on_session_end();
- 
--        this._next_header_handler = null;
+
+-    _log_header(label, header) {
+-        console.debug(this.type, label, header.NAME, header._bytes4.join());
 +      //We shouldn’t ever expect to receive an abort. Even if we
 +      //have sent an abort ourselves, the Sentry should have stopped
 +      //directing input to this Session object.
 +      //if (this._expect_abort) {
 +      //    return true;
 +      //}
- 
--        handler.call(this, new_header);
-+      throw new Zmodem.Error('peer_aborted');
++      return true;
++      // throw new Zmodem.Error('peer_aborted');
      }
 +  }
- 
+
+-    _consume_header(new_header) {
+-        this._on_receive(new_header);
++  _send_header(name /*, args */) {
++    if (!this._sender) throw 'Need sender!';
+
+-        var handler = this._next_header_handler && this._next_header_handler[ new_header.NAME ];
+-        if (!handler) {
+-            console.error("Unhandled header!", new_header, this._next_header_handler);
+-            throw new Zmodem.Error( "Unhandled header: " + new_header.NAME );
+-        }
++    var args = Array.apply(null, arguments);
+
+-        this._next_header_handler = null;
++    var bytes_hdr = this._create_header_bytes(args);
+
+-        handler.call(this, new_header);
+-    }
+-
 -    //TODO: strip out the abort sequence
 -    _check_for_abort_sequence() {
 -        var abort_at = Zmodem.ZMLIB.find_subarray( this._input_buffer, ABORT_SEQUENCE );
-+  _send_header(name /*, args */) {
-+    if (!this._sender) throw 'Need sender!';
- 
+-
 -        if (abort_at !== -1) {
-+    var args = Array.apply(null, arguments);
- 
+-
 -            //TODO: expose this to caller
 -            this._input_buffer.splice( 0, abort_at + ABORT_SEQUENCE.length );
-+    var bytes_hdr = this._create_header_bytes(args);
- 
+-
 -            this._aborted = true;
 -
 -            //TODO compare response here to lrzsz.
@@ -629,51 +632,57 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    if (Zmodem.DEBUG) {
 +      this._log_header('SENDING HEADER', bytes_hdr[1]);
      }
- 
+
 -    _send_header(name /*, args */) {
 -        if (!this._sender) throw "Need sender!";
 +    this._sender(bytes_hdr[0]);
- 
+
 -        var args = Array.apply( null, arguments );
 +    this._last_sent_header = bytes_hdr[1];
 +  }
- 
+
 -        var bytes_hdr = this._create_header_bytes(args);
 +  _create_header_bytes(name_and_args) {
 +    var hdr = Zmodem.Header.build.apply(Zmodem.Header, name_and_args);
- 
+
 -        if (Zmodem.DEBUG) {
 -            this._log_header( "SENDING HEADER", bytes_hdr[1] );
 -        }
 -
 -        this._sender(bytes_hdr[0]);
-+    var formatter = this._get_header_formatter(name_and_args[0]);
- 
+-
 -        this._last_sent_header = bytes_hdr[1];
 -    }
+-
+-    _create_header_bytes(name_and_args) {
++    var formatter = this._get_header_formatter(name_and_args[0]);
+
+-        var hdr = Zmodem.Header.build.apply( Zmodem.Header, name_and_args );
 +    return [hdr[formatter](this._zencoder), hdr];
 +  }
- 
--    _create_header_bytes(name_and_args) {
+
+-        var formatter = this._get_header_formatter(name_and_args[0]);
 +  _strip_and_enqueue_input(input) {
 +    Zmodem.ZMLIB.strip_ignored_bytes(input);
- 
--        var hdr = Zmodem.Header.build.apply( Zmodem.Header, name_and_args );
-+    //It’s possible that “input” is empty at this point.
-+    //It doesn’t seem to hurt anything to keep processing, though.
- 
--        var formatter = this._get_header_formatter(name_and_args[0]);
--
+
 -        return [
 -            hdr[formatter](this._zencoder),
 -            hdr
 -        ];
 -    }
-+    this._input_buffer.push.apply(this._input_buffer, input);
-+  }
- 
+-
 -    _strip_and_enqueue_input(input) {
 -        Zmodem.ZMLIB.strip_ignored_bytes(input);
++    //It’s possible that “input” is empty at this point.
++    //It doesn’t seem to hurt anything to keep processing, though.
+
+-        //It’s possible that “input” is empty at this point.
+-        //It doesn’t seem to hurt anything to keep processing, though.
++    this._input_buffer.push.apply(this._input_buffer, input);
++  }
+
+-        this._input_buffer.push.apply( this._input_buffer, input );
+-    }
 +  /**
 +   * **STOP!** You probably want to `skip()` an Offer rather than
 +   * `abort()`. See below.
@@ -697,13 +706,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +   */
 +  abort() {
 +    //this._expect_abort = true;
- 
--        //It’s possible that “input” is empty at this point.
--        //It doesn’t seem to hurt anything to keep processing, though.
--
--        this._input_buffer.push.apply( this._input_buffer, input );
--    }
--
+
 -    /**
 -     * **STOP!** You probably want to `skip()` an Offer rather than
 -     * `abort()`. See below.
@@ -755,7 +758,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    //FG: Since we assume our connection is reliable, there’s
 +    //no reason to send more than 5 CANs.
 +    this._sender(ABORT_SEQUENCE.concat([BS, BS, BS, BS, BS]));
- 
+
 -        this._aborted = true;
 -        this._sender = function() {
 -            throw new Zmodem.Error('already_aborted');
@@ -764,15 +767,15 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    this._sender = function () {
 +      throw new Zmodem.Error('already_aborted');
 +    };
- 
+
 -        this._on_session_end();
 +    this._on_session_end();
- 
+
 -        return;
 -    }
 +    return;
 +  }
- 
+
 -    //----------------------------------------------------------------------
 -    _on_session_end() {
 -        this._Happen("session_end");
@@ -781,19 +784,19 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +  _on_session_end() {
 +    this._Happen('session_end');
 +  }
- 
+
 -    _on_receive(hdr_or_pkt) {
 -        this._Happen("receive", hdr_or_pkt);
 -    }
 +  _on_receive(hdr_or_pkt) {
 +    this._Happen('receive', hdr_or_pkt);
 +  }
- 
+
 -    _before_consume() {}
 -}
 +  _before_consume() {}
 +};
- 
+
  function _trim_OO(array) {
 -    if (0 === Zmodem.ZMLIB.find_subarray(array, OVER_AND_OUT)) {
 -        array.splice(0, OVER_AND_OUT.length);
@@ -801,7 +804,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +  if (0 === Zmodem.ZMLIB.find_subarray(array, OVER_AND_OUT)) {
 +    array.splice(0, OVER_AND_OUT.length);
 +  }
- 
+
 -    //TODO: This assumes OVER_AND_OUT is 2 bytes long. No biggie, but.
 -    else if ( array[0] === OVER_AND_OUT[ OVER_AND_OUT.length - 1 ] ) {
 -        array.splice(0, 1);
@@ -810,11 +813,11 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +  else if (array[0] === OVER_AND_OUT[OVER_AND_OUT.length - 1]) {
 +    array.splice(0, 1);
 +  }
- 
+
 -    return array;
 +  return array;
  }
- 
+
  /** A class for ZMODEM receive sessions.
 @@ -463,443 +448,446 @@ function _trim_OO(array) {
   * @extends Session
@@ -1086,16 +1089,25 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +      //"session_end" will have access to it.
 +      this._bytes_after_OO = _trim_OO(this._bytes_being_consumed.slice(0));
 +      this._on_session_end();
- 
+
 -        //this._Happen("offer", xfer);
 +      return;
      }
- 
+
 -    _consume_ZDATA_data(subpacket) {
 -        if (!this._accepted_offer) {
 -            throw "PROTOCOL: Received data without accepting!";
 -        }
--
++    var parsed;
++    do {
++      if (this._next_subpacket_handler) {
++        parsed = this._parse_and_consume_subpacket();
++      } else {
++        parsed = this._parse_and_consume_header();
++      }
++    } while (parsed && this._input_buffer.length);
++  }
+
 -        //TODO: Probably should include some sort of preventive against
 -        //infinite loop here: if the peer hasn’t sent us what we want after,
 -        //say, 10 ZRPOS headers then we should send ZABORT and just end.
@@ -1107,23 +1119,14 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -
 -        this._file_offset += subpacket.get_payload().length;
 -        this._on_data_in(subpacket);
-+    var parsed;
-+    do {
-+      if (this._next_subpacket_handler) {
-+        parsed = this._parse_and_consume_subpacket();
-+      } else {
-+        parsed = this._parse_and_consume_header();
-+      }
-+    } while (parsed && this._input_buffer.length);
-+  }
- 
+-
 -        /*
 -        console.warn("received error from data_in callback; retrying", e);
 -        throw "unimplemented";
 -        */
 +  _consume_data(subpacket) {
 +    this._on_receive(subpacket);
- 
+
 -        if (subpacket.ack_expected() && !subpacket.frame_end()) {
 -            this._send_header( "ZACK", Zmodem.ENCODELIB.pack_u32_le(this._file_offset) );
 -        }
@@ -1135,7 +1138,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +        subpacket.get_payload().join()
 +      );
      }
- 
+
 -    _make_promise_for_between_files() {
 -        var sess = this;
 -
@@ -1173,25 +1176,25 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -            };
 +    this._next_subpacket_handler.call(this, subpacket);
 +  }
- 
+
 -            sess._next_header_handler = between_files_handler;
 -        } );
 +  _octets_to_string(octets) {
 +    if (!this._textdecoder) {
 +      this._textdecoder = new Zmodem.Text.Decoder();
      }
- 
+
 -    _consume_ZSINIT_data(spkt) {
 +    return this._textdecoder.decode(new Uint8Array(octets));
 +  }
- 
+
 -        //TODO: Should this be used when we signal a cancellation?
 -        this._attn = spkt.get_payload();
 +  _consume_ZFILE_data(hdr, subpacket) {
 +    if (this._file_info) {
 +      throw 'PROTOCOL: second ZFILE data subpacket received';
      }
- 
+
 -    /**
 -     * Start the ZMODEM session by signaling to the sender that
 -     * we are ready for the first file offer.
@@ -1209,7 +1212,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -        this._send_ZRINIT();
 +    var packet_payload = subpacket.get_payload();
 +    var nul_at = packet_payload.indexOf(0);
- 
+
 -        return ret;
 -    }
 -
@@ -1241,9 +1244,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -                            this._consume_ZEOF(hdr);
 -
 -                            this._next_subpacket_handler = null;
-+    var fname = this._octets_to_string(packet_payload.slice(0, nul_at));
-+    var the_rest = this._octets_to_string(packet_payload.slice(1 + nul_at)).split(' ');
- 
+-
 -                            // We don’t care about this promise.
 -                            // Prior to v0.1.8 we did because we called
 -                            // resolve_accept() at the resolution of this
@@ -1319,7 +1320,9 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -        }
 -
 -        //this._accepted_offer = false;
--
++    var fname = this._octets_to_string(packet_payload.slice(0, nul_at));
++    var the_rest = this._octets_to_string(packet_payload.slice(1 + nul_at)).split(' ');
+
 -        this._file_info = null;
 -
 -        this._send_header( "ZSKIP" );
@@ -1329,7 +1332,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    if (mtime) {
 +      mtime = new Date(mtime * 1000);
      }
- 
+
 -    _send_ZRINIT() {
 -        this._send_header( "ZRINIT", ZRINIT_FLAGS );
 -    }
@@ -1339,7 +1342,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +      mtime: mtime || null,
 +      mode: (the_rest[2] && parseInt(the_rest[2], 8)) || null,
 +      serial: (the_rest[3] && parseInt(the_rest[3], 10)) || null,
- 
+
 -    _consume_ZFIN() {
 -        this._got_ZFIN = true;
 -        this._send_header( "ZFIN" );
@@ -1347,13 +1350,13 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +      files_remaining: the_rest[4] ? parseInt(the_rest[4], 10) : null,
 +      bytes_remaining: the_rest[5] ? parseInt(the_rest[5], 10) : null,
 +    };
- 
+
 -    _consume_ZEOF(header) {
 -        if (this._file_offset !== header.get_offset()) {
 -            throw( "ZEOF offset mismatch; unimplemented (local: " + this._file_offset + "; ZEOF: " + header.get_offset() + ")" );
 -        }
 +    //console.log("ZFILE", hdr);
- 
+
 -        this._on_file_end();
 +    var xfer = new Offer(
 +      hdr.get_options(),
@@ -1362,7 +1365,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +      this._skip.bind(this)
 +    );
 +    this._current_transfer = xfer;
- 
+
 -        //Preserve these two so that file_end callbacks
 -        //will have the right information.
 -        this._file_info = null;
@@ -1370,7 +1373,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -    }
 +    //this._Happen("offer", xfer);
 +  }
- 
+
 -    _consume_ZDATA(header) {
 -        if ( this._file_offset === header.get_offset() ) {
 -            this._offset_ok = true;
@@ -1382,7 +1385,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    if (!this._accepted_offer) {
 +      throw 'PROTOCOL: Received data without accepting!';
      }
- 
+
 -    _send_ZRPOS() {
 -        this._send_header( "ZRPOS", this._file_offset );
 +    //TODO: Probably should include some sort of preventive against
@@ -1393,15 +1396,15 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +      _send_ZRPOS();
 +      return;
      }
- 
+
 -    //----------------------------------------------------------------------
 -    //events
-+    this._file_offset += subpacket.get_payload().length;
-+    this._on_data_in(subpacket);
- 
+-
 -    _on_file_end() {
 -        this._Happen("file_end");
--
++    this._file_offset += subpacket.get_payload().length;
++    this._on_data_in(subpacket);
+
 -        if (this._current_transfer) {
 -            this._current_transfer._Happen("complete");
 -            this._current_transfer = null;
@@ -1411,7 +1414,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +        console.warn("received error from data_in callback; retrying", e);
 +        throw "unimplemented";
 +        */
- 
+
 -    _on_data_in(subpacket) {
 -        this._Happen("data_in", subpacket);
 +    if (subpacket.ack_expected() && !subpacket.frame_end()) {
@@ -1644,7 +1647,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +
 +  _on_data_in(subpacket) {
 +    this._Happen('data_in', subpacket);
- 
+
 -        if (this._current_transfer) {
 -            this._current_transfer._Happen("input", subpacket.get_payload());
 -        }
@@ -1654,7 +1657,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -}
 +  }
 +};
- 
+
 -Object.assign(
 -    Zmodem.Session.Receive.prototype,
 -    {
@@ -1664,9 +1667,9 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +Object.assign(Zmodem.Session.Receive.prototype, {
 +  type: 'receive',
 +});
- 
+
  //----------------------------------------------------------------------
- 
+
 @@ -927,36 +915,36 @@ Object.assign(
   * @mixin
   */
@@ -1732,12 +1735,13 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    return this._file_offset;
 +  },
  };
- 
+
  /**
-@@ -968,43 +956,42 @@ var Transfer_Offer_Mixin = {
+@@ -967,44 +955,46 @@ var Transfer_Offer_Mixin = {
+  *
   * @mixes Transfer_Offer_Mixin
   */
- class Transfer {
+-class Transfer {
 -
 -    /**
 -     * Not called directly.
@@ -1773,15 +1777,19 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -        if (array_like) this._file_offset += array_like.length;
 -        return ret;
 -    }
++class Transfer extends _Eventer {
 +  /**
 +   * Not called directly.
 +   */
 +  constructor(file_info, offset, send_func, end_func) {
++    super();
 +    this._file_info = file_info;
 +    this._file_offset = offset || 0;
 +
 +    this._send = send_func;
 +    this._end = end_func;
++
++    this._Add_event('send_progress');
 +  }
 +
 +  /**
@@ -1810,10 +1818,10 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
  }
 -Object.assign( Transfer.prototype, Transfer_Offer_Mixin );
 +Object.assign(Transfer.prototype, Transfer_Offer_Mixin);
- 
+
  /**
   * A class to represent a receiver’s interaction with a single file
-@@ -1015,132 +1002,130 @@ Object.assign( Transfer.prototype, Transfer_Offer_Mixin );
+@@ -1015,132 +1005,130 @@ Object.assign( Transfer.prototype, Transfer_Offer_Mixin );
   * @mixes Transfer_Offer_Mixin
   */
  class Offer extends _Eventer {
@@ -1930,7 +1938,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +          throw 'Invalid “on_input”: ' + opts.on_input;
          }
      }
- 
+
 -    /**
 -     * Tell the sender that you don’t want the offered file.
 -     *
@@ -1947,7 +1955,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -        return this._skip_func.apply(this, arguments);
 -    }
 +    this._input_handler_mode = opts.on_input || DEFAULT_RECEIVE_INPUT_MODE;
- 
+
 -    /**
 -     * Tell the sender to send the offered file.
 -     *
@@ -1997,17 +2005,27 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -        }
 +    return this._accept_func(this._file_offset).then(this._get_spool.bind(this));
 +  }
- 
+
 -        this._input_handler_mode = opts.on_input || DEFAULT_RECEIVE_INPUT_MODE;
 +  _input_handler(payload) {
 +    this._file_offset += payload.length;
- 
+
 -        return this._accept_func(this._file_offset).then( this._get_spool.bind(this) );
 -    }
--
++    if (typeof this._input_handler_mode === 'function') {
++      this._input_handler_mode(payload);
++    } else {
++      if (this._input_handler_mode === DEFAULT_RECEIVE_INPUT_MODE) {
++        payload = new Uint8Array(payload);
++      }
+
 -    _input_handler(payload) {
 -        this._file_offset += payload.length;
--
++      //sanity
++      else if (this._input_handler_mode !== 'spool_array') {
++        throw new Zmodem.Error('WTF?? _input_handler_mode = ' + this._input_handler_mode);
++      }
+
 -        if (typeof this._input_handler_mode === "function") {
 -            this._input_handler_mode(payload);
 -        }
@@ -2015,28 +2033,18 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -            if (this._input_handler_mode === DEFAULT_RECEIVE_INPUT_MODE) {
 -                payload = new Uint8Array(payload);
 -            }
-+    if (typeof this._input_handler_mode === 'function') {
-+      this._input_handler_mode(payload);
-+    } else {
-+      if (this._input_handler_mode === DEFAULT_RECEIVE_INPUT_MODE) {
-+        payload = new Uint8Array(payload);
-+      }
- 
+-
 -            //sanity
 -            else if (this._input_handler_mode !== "spool_array") {
 -                throw new Zmodem.Error("WTF?? _input_handler_mode = " + this._input_handler_mode);
 -            }
-+      //sanity
-+      else if (this._input_handler_mode !== 'spool_array') {
-+        throw new Zmodem.Error('WTF?? _input_handler_mode = ' + this._input_handler_mode);
-+      }
- 
+-
 -            this._spool.push(payload);
 -        }
 +      this._spool.push(payload);
      }
 +  }
- 
+
 -    _get_spool() {
 -        return this._spool;
 -    }
@@ -2046,7 +2054,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
  }
 -Object.assign( Offer.prototype, Transfer_Offer_Mixin );
 +Object.assign(Offer.prototype, Transfer_Offer_Mixin);
- 
+
  //Curious that ZSINIT isn’t here … but, lsz sends it as hex.
  const SENDER_BINARY_HEADER = {
 -    ZFILE: true,
@@ -2054,9 +2062,9 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +  ZFILE: true,
 +  ZDATA: true,
  };
- 
+
  /**
-@@ -1149,53 +1134,51 @@ const SENDER_BINARY_HEADER = {
+@@ -1149,53 +1137,51 @@ const SENDER_BINARY_HEADER = {
   * @extends Session
   */
  Zmodem.Session.Send = class ZmodemSendSession extends Zmodem.Session {
@@ -2065,7 +2073,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +   */
 +  constructor(zrinit_hdr) {
 +    super();
- 
+
 -    /**
 -     * Not called directly.
 -     */
@@ -2083,10 +2091,10 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    } else if (zrinit_hdr.NAME !== 'ZRINIT') {
 +      throw 'First header should be ZRINIT, not ' + zrinit_hdr.NAME;
 +    }
- 
+
 -        this._last_header_name = 'ZRINIT';
 +    this._last_header_name = 'ZRINIT';
- 
+
 -        //We don’t need to send crc32. Even if the other side can grok it,
 -        //there’s no point to sending it since, for now, we assume we’re
 -        //on a reliable connection, e.g., TCP. Ideally we’d just forgo
@@ -2103,22 +2111,22 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    //If we *were* to start using crc32, we’d update this every time
 +    //we send a header.
 +    this._subpacket_encode_func = 'encode16';
- 
+
 -        this._zencoder = new Zmodem.ZDLE();
 +    this._zencoder = new Zmodem.ZDLE();
- 
+
 -        this._consume_ZRINIT(zrinit_hdr);
 +    this._consume_ZRINIT(zrinit_hdr);
- 
+
 -        this._file_offset = 0;
 +    this._file_offset = 0;
- 
+
 -        var zrqinit_count = 0;
 +    var zrqinit_count = 0;
- 
+
 -        this._start_keepalive_on_set_sender = true;
 +    this._start_keepalive_on_set_sender = true;
- 
+
 -        //lrzsz will send ZRINIT until it gets an offer. (keep-alive?)
 -        //It sends 4 additional ones after the initial ZRINIT and, if
 -        //no response is received, starts sending “C” (0x43, 67) as if to
@@ -2135,16 +2143,16 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    //this._prepare_to_receive_ZRINIT( function keep_alive() {
 +    //    sess._prepare_to_receive_ZRINIT(keep_alive);
 +    //} );
- 
+
 -        //queue up the ZSINIT flag to send -- but seems useless??
 +    //queue up the ZSINIT flag to send -- but seems useless??
- 
+
 -        /*
 +    /*
          Object.assign(
              this._on_evt,
              {
-@@ -1203,312 +1186,305 @@ Zmodem.Session.Send = class ZmodemSendSession extends Zmodem.Session {
+@@ -1203,312 +1189,306 @@ Zmodem.Session.Send = class ZmodemSendSession extends Zmodem.Session {
              },
          };
          */
@@ -2204,7 +2212,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +          },
 +        };
 +        sess._send_ZSINIT();
- 
+
 -    /**
 -     * Sets the sender function. The first time this is called,
 -     * it will also initiate a keepalive using ZSINIT until the
@@ -2227,7 +2235,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +      });
 +    }
 +  }
- 
+
 -        return this;
 +  _stop_keepalive() {
 +    if (this._keepalive_promise) {
@@ -2236,7 +2244,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +      this._keep_alive_promise = null;
      }
 +  }
- 
+
 -    //7.3.3 .. The sender also uses hex headers when they are
 -    //not followed by binary data subpackets.
 -    //
@@ -2252,7 +2260,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    if (this._zencoder.escapes_ctrl_chars()) {
 +      zsinit_flags.push('ESCCTL');
      }
- 
+
 -    //In order to keep lrzsz from timing out, we send ZSINIT every 5 seconds.
 -    //Maybe make this configurable?
 -    _start_keepalive() {
@@ -2291,7 +2299,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    if (hdr.get_buffer_size()) {
 +      throw 'Buffer size (' + hdr.get_buffer_size() + ') is unsupported!';
      }
- 
+
 -    _stop_keepalive() {
 -        if (this._keepalive_promise) {
 -            //console.log("STOPPING KEEPALIVE");
@@ -2301,14 +2309,14 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    if (!hdr.can_full_duplex()) {
 +      throw 'Half-duplex I/O is unsupported!';
      }
- 
+
 -    _send_ZSINIT() {
 -        //See note at _ensure_receiver_escapes_ctrl_chars()
 -        //for why we have to pass ESCCTL.
 +    if (!hdr.can_overlap_io()) {
 +      throw 'Non-overlap I/O is unsupported!';
 +    }
- 
+
 -        var zsinit_flags = [];
 -        if (this._zencoder.escapes_ctrl_chars()) {
 -            zsinit_flags.push("ESCCTL");
@@ -2316,7 +2324,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    if (hdr.escape_8th_bit()) {
 +      throw '8-bit escaping is unsupported!';
 +    }
- 
+
 -        this._send_header_and_data(
 -            ["ZSINIT", zsinit_flags],
 -            [0],
@@ -2355,23 +2363,23 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    } else {
 +      promise = Promise.resolve();
      }
- 
+
 -    _consume_ZRINIT(hdr) {
 -        this._last_ZRINIT = hdr;
 +    return promise;
 +  }
- 
+
 -        if (hdr.get_buffer_size()) {
 -            throw( "Buffer size (" + hdr.get_buffer_size() + ") is unsupported!" );
 -        }
 +  _convert_params_to_offer_payload_array(params) {
 +    params = Zmodem.Validation.offer_parameters(params);
- 
+
 -        if (!hdr.can_full_duplex()) {
 -            throw( "Half-duplex I/O is unsupported!" );
 -        }
 +    var subpacket_payload = params.name + '\x00';
- 
+
 -        if (!hdr.can_overlap_io()) {
 -            throw( "Non-overlap I/O is unsupported!" );
 -        }
@@ -2381,13 +2389,13 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +      params.mode ? (0x8000 | params.mode).toString(8) : '0',
 +      '0', //serial
 +    ];
- 
+
 -        if (hdr.escape_8th_bit()) {
 -            throw( "8-bit escaping is unsupported!" );
 -        }
 +    if (params.files_remaining) {
 +      subpacket_space_pieces.push(params.files_remaining);
- 
+
 -        if (FORCE_ESCAPE_CTRL_CHARS) {
 -            this._zencoder.set_escape_ctrl_chars(true);
 -            if (!hdr.escape_ctrl_chars()) {
@@ -2401,7 +2409,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +        subpacket_space_pieces.push(params.bytes_remaining);
 +      }
      }
- 
+
 -    //https://stackoverflow.com/questions/23155939/missing-0xf-and-0x16-when-binary-data-through-virtual-serial-port-pair-created-b
 -    //^^ Because of that, we always escape control characters.
 -    //The alternative would be that lrz would never receive those
@@ -2428,7 +2436,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    subpacket_payload += subpacket_space_pieces.join(' ');
 +    return this._string_to_octets(subpacket_payload);
 +  }
- 
+
 -        return promise;
 +  /**
 +   * Send an offer to the receiver.
@@ -2443,14 +2451,14 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    if (Zmodem.DEBUG) {
 +      console.debug('SENDING OFFER', params);
      }
- 
+
 -    _convert_params_to_offer_payload_array(params) {
 -        params = Zmodem.Validation.offer_parameters(params);
 +    if (!params) throw 'need file params!';
- 
+
 -        var subpacket_payload = params.name + "\x00";
 +    if (this._sending_file) throw 'Already sending file!';
- 
+
 -        var subpacket_space_pieces = [
 -            (params.size || 0).toString(10),
 -            params.mtime ? params.mtime.toString(8) : "0",
@@ -2458,11 +2466,11 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -            "0",    //serial
 -        ];
 +    var payload_array = this._convert_params_to_offer_payload_array(params);
- 
+
 -        if (params.files_remaining) {
 -            subpacket_space_pieces.push( params.files_remaining );
 +    this._stop_keepalive();
- 
+
 -            if (params.bytes_remaining) {
 -                subpacket_space_pieces.push( params.bytes_remaining );
 -            }
@@ -2471,7 +2479,8 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -        subpacket_payload += subpacket_space_pieces.join(" ");
 -        return this._string_to_octets(subpacket_payload);
 -    }
--
++    var sess = this;
+
 -    /**
 -     * Send an offer to the receiver.
 -     *
@@ -2485,45 +2494,6 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -        if (Zmodem.DEBUG) {
 -            console.debug("SENDING OFFER", params);
 -        }
-+    var sess = this;
- 
--        if (!params) throw "need file params!";
--
--        if (this._sending_file) throw "Already sending file!";
--
--        var payload_array = this._convert_params_to_offer_payload_array(params);
--
--        this._stop_keepalive();
--
--        var sess = this;
--
--        function zrpos_handler_setter_func() {
--            sess._next_header_handler = {
--
--                // The receiver may send ZRPOS in at least two cases:
--                //
--                // 1) A malformed subpacket arrived, so we need to
--                // “rewind” a bit and continue from the receiver’s
--                // last-successful location in the file.
--                //
--                // 2) The receiver hasn’t gotten any data for a bit,
--                // so it sends ZRPOS as a “ping”.
--                //
--                // Case #1 shouldn’t happen since zmodem.js requires a
--                // reliable transport. Case #2, though, can happen due
--                // to either normal network congestion or errors in
--                // implementation. In either case, there’s nothing for
--                // us to do but to ignore the ZRPOS, with an optional
--                // warning.
--                //
--                ZRPOS: function(hdr) {
--                    if (Zmodem.DEBUG) {
--                        console.warn("Mid-transfer ZRPOS … implementation error?");
--                    }
--
--                    zrpos_handler_setter_func();
--                },
--            };
 +    function zrpos_handler_setter_func() {
 +      sess._next_header_handler = {
 +        // The receiver may send ZRPOS in at least two cases:
@@ -2567,18 +2537,56 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +
 +            zrpos_handler_setter_func();
 +
-+            res(
-+              new Transfer(
-+                params,
-+                hdr.get_offset(),
-+                sess._send_interim_file_piece.bind(sess),
-+                sess._end_file.bind(sess)
-+              )
++            let transfer = new Transfer(
++              params,
++              hdr.get_offset(),
++              sess._send_interim_file_piece.bind(sess),
++              sess._end_file.bind(sess)
 +            );
++            this._current_transfer = transfer;
+
+-        if (!params) throw "need file params!";
+-
+-        if (this._sending_file) throw "Already sending file!";
+-
+-        var payload_array = this._convert_params_to_offer_payload_array(params);
+-
+-        this._stop_keepalive();
+-
+-        var sess = this;
+-
+-        function zrpos_handler_setter_func() {
+-            sess._next_header_handler = {
+-
+-                // The receiver may send ZRPOS in at least two cases:
+-                //
+-                // 1) A malformed subpacket arrived, so we need to
+-                // “rewind” a bit and continue from the receiver’s
+-                // last-successful location in the file.
+-                //
+-                // 2) The receiver hasn’t gotten any data for a bit,
+-                // so it sends ZRPOS as a “ping”.
+-                //
+-                // Case #1 shouldn’t happen since zmodem.js requires a
+-                // reliable transport. Case #2, though, can happen due
+-                // to either normal network congestion or errors in
+-                // implementation. In either case, there’s nothing for
+-                // us to do but to ignore the ZRPOS, with an optional
+-                // warning.
+-                //
+-                ZRPOS: function(hdr) {
+-                    if (Zmodem.DEBUG) {
+-                        console.warn("Mid-transfer ZRPOS … implementation error?");
+-                    }
+-
+-                    zrpos_handler_setter_func();
+-                },
+-            };
++            res(transfer);
 +          },
          };
 +      });
- 
+
 -        var doer_func = function() {
 -
 -            //return Promise object that is fulfilled when the ZRPOS or ZSKIP arrives.
@@ -2614,79 +2622,79 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -            return handler_setter_promise;
 -        };
 +      sess._send_header_and_data(['ZFILE'], payload_array, 'end_ack');
- 
+
 -        if (FORCE_ESCAPE_CTRL_CHARS) {
 -            return this._ensure_receiver_escapes_ctrl_chars().then(doer_func);
 -        }
 +      delete sess._sent_ZDATA;
- 
+
 -        return doer_func();
 -    }
 +      return handler_setter_promise;
 +    };
- 
+
 -    _send_header_and_data( hdr_name_and_args, data_arr, frameend ) {
 -        var bytes_hdr = this._create_header_bytes(hdr_name_and_args);
 +    if (FORCE_ESCAPE_CTRL_CHARS) {
 +      return this._ensure_receiver_escapes_ctrl_chars().then(doer_func);
 +    }
- 
+
 -        var data_bytes = this._build_subpacket_bytes(data_arr, frameend);
 +    return doer_func();
 +  }
- 
+
 -        bytes_hdr[0].push.apply( bytes_hdr[0], data_bytes );
 +  _send_header_and_data(hdr_name_and_args, data_arr, frameend) {
 +    var bytes_hdr = this._create_header_bytes(hdr_name_and_args);
- 
+
 -        if (Zmodem.DEBUG) {
 -            this._log_header( "SENDING HEADER", bytes_hdr[1] );
 -            console.debug( this.type, "-- HEADER PAYLOAD:", frameend, data_bytes.length );
 -        }
 +    var data_bytes = this._build_subpacket_bytes(data_arr, frameend);
- 
+
 -        this._sender( bytes_hdr[0] );
 +    bytes_hdr[0].push.apply(bytes_hdr[0], data_bytes);
- 
+
 -        this._last_sent_header = bytes_hdr[1];
 +    if (Zmodem.DEBUG) {
 +      this._log_header('SENDING HEADER', bytes_hdr[1]);
 +      console.debug(this.type, '-- HEADER PAYLOAD:', frameend, data_bytes.length);
      }
- 
+
 -    _build_subpacket_bytes( bytes_arr, frameend ) {
 -        var subpacket = Zmodem.Subpacket.build(bytes_arr, frameend);
 +    this._sender(bytes_hdr[0]);
- 
+
 -        return subpacket[this._subpacket_encode_func]( this._zencoder );
 -    }
 +    this._last_sent_header = bytes_hdr[1];
 +  }
- 
+
 -    _build_and_send_subpacket( bytes_arr, frameend ) {
 -        this._sender( this._build_subpacket_bytes(bytes_arr, frameend) );
 -    }
 +  _build_subpacket_bytes(bytes_arr, frameend) {
 +    var subpacket = Zmodem.Subpacket.build(bytes_arr, frameend);
- 
+
 -    _string_to_octets(string) {
 -        if (!this._textencoder) {
 -            this._textencoder = new Zmodem.Text.Encoder();
 -        }
 +    return subpacket[this._subpacket_encode_func](this._zencoder);
 +  }
-+
+
+-        var uint8arr = this._textencoder.encode(string);
+-        return Array.prototype.slice.call(uint8arr);
 +  _build_and_send_subpacket(bytes_arr, frameend) {
 +    this._sender(this._build_subpacket_bytes(bytes_arr, frameend));
 +  }
- 
--        var uint8arr = this._textencoder.encode(string);
--        return Array.prototype.slice.call(uint8arr);
++
 +  _string_to_octets(string) {
 +    if (!this._textencoder) {
 +      this._textencoder = new Zmodem.Text.Encoder();
      }
- 
+
 -    /*
 +    var uint8arr = this._textencoder.encode(string);
 +    return Array.prototype.slice.call(uint8arr);
@@ -2697,13 +2705,13 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
      send_file_offset(offset) {
      }
      */
- 
+
 -    /*
 +  /*
          Sending logic works thus:
              - ASSUME the receiver can overlap I/O (CANOVIO)
                  (so fail if !CANFDX || !CANOVIO)
-@@ -1517,161 +1493,153 @@ Zmodem.Session.Send = class ZmodemSendSession extends Zmodem.Session {
+@@ -1517,161 +1497,170 @@ Zmodem.Session.Send = class ZmodemSendSession extends Zmodem.Session {
                  NB: try 8k/32k/64k chunk sizes? Looks like there’s
                  no need to change the packet otherwise.
      */
@@ -2712,26 +2720,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -
 -        //We don’t ask the receiver to confirm because there’s no need.
 -        this._send_file_part(bytes_obj, "no_end_no_ack");
-+  //TODO: Put this on a Transfer object similar to what Receive uses?
-+  _send_interim_file_piece(bytes_obj) {
-+    //We don’t ask the receiver to confirm because there’s no need.
-+    this._send_file_part(bytes_obj, 'no_end_no_ack');
-+
-+    //This pattern will allow
-+    //error-correction without buffering the entire stream in JS.
-+    //For now the promise is always resolved, but in the future we
-+    //can make it only resolve once we’ve gotten acknowledgement.
-+    return Promise.resolve();
-+  }
-+
-+  _ensure_we_are_sending() {
-+    if (!this._sending_file) throw 'Not sending a file currently!';
-+  }
-+
-+  //This resolves once we receive ZEOF.
-+  _end_file(bytes_obj) {
-+    this._ensure_we_are_sending();
- 
+-
 -        //This pattern will allow
 -        //error-correction without buffering the entire stream in JS.
 -        //For now the promise is always resolved, but in the future we
@@ -2767,7 +2756,26 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -        this._send_header( "ZEOF", this._file_offset );
 -
 -        this._file_offset = 0;
--
++  //TODO: Put this on a Transfer object similar to what Receive uses?
++  _send_interim_file_piece(bytes_obj) {
++    //We don’t ask the receiver to confirm because there’s no need.
++    this._send_file_part(bytes_obj, 'no_end_no_ack');
++
++    //This pattern will allow
++    //error-correction without buffering the entire stream in JS.
++    //For now the promise is always resolved, but in the future we
++    //can make it only resolve once we’ve gotten acknowledgement.
++    return Promise.resolve();
++  }
++
++  _ensure_we_are_sending() {
++    if (!this._sending_file) throw 'Not sending a file currently!';
++  }
++
++  //This resolves once we receive ZEOF.
++  _end_file(bytes_obj) {
++    this._ensure_we_are_sending();
+
 -        return ret;
 -    }
 -
@@ -2800,14 +2808,9 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -        if (!ok_to_close) {
 -            throw( "Can’t close; last received header was “" + this._last_header_name + "”" );
 -        }
-+    //Is the frame-end-ness of this last packet redundant
-+    //with the ZEOF packet?? - No. It signals the receiver that
-+    //the next thing to expect is a header, not a packet.
- 
+-
 -        var sess = this;
-+    //no-ack, following lrzsz’s example
-+    this._send_file_part(bytes_obj, 'end_no_ack');
- 
+-
 -        var ret = new Promise( function(res, rej) {
 -            sess._next_header_handler = {
 -                ZFIN: function() {
@@ -2818,8 +2821,7 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -                },
 -            };
 -        } );
-+    var sess = this;
- 
+-
 -        this._send_header("ZFIN");
 -
 -        return ret;
@@ -2834,6 +2836,17 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -            this._send_header( "ZDATA", this._file_offset );
 -            this._sent_ZDATA = true;
 -        }
++    //Is the frame-end-ness of this last packet redundant
++    //with the ZEOF packet?? - No. It signals the receiver that
++    //the next thing to expect is a header, not a packet.
+
+-        var obj_offset = 0;
++    //no-ack, following lrzsz’s example
++    this._send_file_part(bytes_obj, 'end_no_ack');
+
+-        var bytes_count = bytes_obj.length;
++    var sess = this;
++
 +    //Register this before we send ZEOF in case of local round-trip.
 +    //(Basically just for synchronous testing, but.)
 +    var ret = new Promise(function (res) {
@@ -2843,11 +2856,9 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    });
 +
 +    this._send_header('ZEOF', this._file_offset);
- 
--        var obj_offset = 0;
++
 +    this._file_offset = 0;
- 
--        var bytes_count = bytes_obj.length;
++
 +    return ret;
 +  }
 +
@@ -2910,47 +2921,47 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +    }
 +
 +    var obj_offset = 0;
- 
--        //We have to go through at least once in event of an
--        //empty buffer, e.g., an empty end_file.
--        while (true) {
--            var chunk_size = Math.min(obj_offset + MAX_CHUNK_LENGTH, bytes_count) - obj_offset;
++
 +    var bytes_count = bytes_obj.length;
 +
 +    //We have to go through at least once in event of an
 +    //empty buffer, e.g., an empty end_file.
 +    while (true) {
 +      var chunk_size = Math.min(obj_offset + MAX_CHUNK_LENGTH, bytes_count) - obj_offset;
- 
--            var at_end = (chunk_size + obj_offset) >= bytes_count;
++
 +      var at_end = chunk_size + obj_offset >= bytes_count;
- 
--            var chunk = bytes_obj.slice( obj_offset, obj_offset + chunk_size );
--            if (!(chunk instanceof Array)) {
--                chunk = Array.prototype.slice.call(chunk);
--            }
++
 +      var chunk = bytes_obj.slice(obj_offset, obj_offset + chunk_size);
 +      if (!(chunk instanceof Array)) {
 +        chunk = Array.prototype.slice.call(chunk);
 +      }
- 
++
++      this._build_and_send_subpacket(chunk, at_end ? final_packetend : 'no_end_no_ack');
+
+-        //We have to go through at least once in event of an
+-        //empty buffer, e.g., an empty end_file.
+-        while (true) {
+-            var chunk_size = Math.min(obj_offset + MAX_CHUNK_LENGTH, bytes_count) - obj_offset;
+-
+-            var at_end = (chunk_size + obj_offset) >= bytes_count;
+-
+-            var chunk = bytes_obj.slice( obj_offset, obj_offset + chunk_size );
+-            if (!(chunk instanceof Array)) {
+-                chunk = Array.prototype.slice.call(chunk);
+-            }
+-
 -            this._build_and_send_subpacket(
 -                chunk,
 -                at_end ? final_packetend : "no_end_no_ack"
 -            );
-+      this._build_and_send_subpacket(chunk, at_end ? final_packetend : 'no_end_no_ack');
- 
+-
 -            this._file_offset += chunk_size;
 -            obj_offset += chunk_size;
-+      this._file_offset += chunk_size;
-+      obj_offset += chunk_size;
- 
+-
 -            if (obj_offset >= bytes_count) break;
 -        }
-+      if (obj_offset >= bytes_count) break;
-     }
-+  }
- 
+-    }
+-
 -    _consume_first() {
 -        if (!this._parse_and_consume_header()) {
 -
@@ -2964,6 +2975,37 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 -                throw "Receiver has fallen back to YMODEM.";
 -            }
 -        }
+-    }
+-
+-    _on_session_end() {
+-        this._stop_keepalive();
+-        super._on_session_end();
+-    }
+-}
++      this._file_offset += chunk_size;
++      obj_offset += chunk_size;
++
++      // if (obj_offset >= bytes_count) break;
++      if (this._current_transfer) {
++        this._current_transfer._Happen('send_progress', {
++          file: this._current_transfer._file_info,
++          offset: obj_offset,
++          total: bytes_count,
++        });
++      }
++
++      if (obj_offset >= bytes_count) {
++        this._current_transfer._Happen('send_progress', {
++          file: this._current_transfer._file_info,
++          offset: bytes_count,
++          total: bytes_count,
++        });
++        this._current_transfer = null;
++        break;
++      }
++    }
++  }
++
 +  _consume_first() {
 +    if (!this._parse_and_consume_header()) {
 +      //When the ZMODEM receive program starts, it immediately sends
@@ -2975,20 +3017,15 @@ index 5f0b8f9d8afa6fba0acd6dd0477afa186f7aad9a..e6aa8b8f502452f201dd73b308eece5b
 +      if (this._input_buffer.join() === '67') {
 +        throw 'Receiver has fallen back to YMODEM.';
 +      }
-     }
++    }
 +  }
- 
--    _on_session_end() {
--        this._stop_keepalive();
--        super._on_session_end();
--    }
--}
++
 +  _on_session_end() {
 +    this._stop_keepalive();
 +    super._on_session_end();
 +  }
 +};
- 
+
 -Object.assign(
 -    Zmodem.Session.Send.prototype,
 -    {

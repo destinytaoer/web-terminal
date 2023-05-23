@@ -12,7 +12,7 @@ export const K8sExecMsgChannel = {
 
 // 生成发送给服务端的消息
 export function processMessageToServer(data: MessageData) {
-  log.warn('to server', data)
+  // log.warn('to server', data)
   const { type, content } = data
   switch (type) {
     case 'resize':
@@ -31,7 +31,6 @@ export function processMessageFromServer(message: string | ArrayBuffer) {
   if (typeof message === 'string') {
     try {
       const data = JSON.parse(message)
-      console.log('receive message', data)
       if (data.type === 'input') {
         return data.content ?? ''
       }
@@ -40,19 +39,18 @@ export function processMessageFromServer(message: string | ArrayBuffer) {
       return ''
     }
   } else {
-    const buffer = Buffer.from(message)
-    const content = buffer.toString()
-    log.info('receive message from server', content)
+    // const buffer = Buffer.from(message)
+    // const content = buffer.toString()
+    // log.info('receive message from server', content)
     return message
   }
 }
 
-export function uploadFile() {
+export function uploadFile(): Promise<FileList> {
   return new Promise((resolve, reject) => {
     const inputDom = document.createElement('input')
     inputDom.type = 'file'
     inputDom.multiple = true
-
     inputDom.addEventListener('change', (e) => {
       const files = e.target?.files as FileList
       console.log('files', files)
@@ -64,5 +62,6 @@ export function uploadFile() {
     })
 
     inputDom.click()
+    // inputDom.close()
   })
 }

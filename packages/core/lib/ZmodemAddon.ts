@@ -1,13 +1,12 @@
-import { saveAs } from 'file-saver'
 import { IDisposable, ITerminalAddon, Terminal } from 'xterm'
-// @ts-ignore
-import * as Zmodem from 'zmodem.js/src/zmodem_browser'
-import { log } from './utils.ts'
+import { log } from './utils'
+import { Zmodem, Detection, Octets, Offer, ZmodemReceiveSession, ZmodemSendSession, ZmodemSentry } from 'zmodem'
+
+// import * as Zmodem from 'zmodem.js/src/zmodem_browser'
 
 export interface ZmodeOptions {
   onSend: () => void
   sender: (data: string | Uint8Array) => void
-  writer: (data: string | Uint8Array) => void
 }
 
 export class ZmodemAddon implements ITerminalAddon {
@@ -15,11 +14,13 @@ export class ZmodemAddon implements ITerminalAddon {
 
   private terminal?: Terminal
 
-  private sentry: Zmodem.Sentry
+  private sentry?: Zmodem.Sentry
 
-  private session: Zmodem.Session
+  private session: Zmodem.Session | null = null
 
-  private denier?: () => void
+  private reveiveSession: Zmodem.Session | null = null
+
+  public denier?: () => void
 
   constructor(private options: ZmodeOptions) {}
 
@@ -28,11 +29,21 @@ export class ZmodemAddon implements ITerminalAddon {
     this.zmodemInit(terminal)
   }
 
+  closeSession() {
+    console.log('close session')
+    this.denier?.()
+    // if (this.session && this.session.type === 'send') {
+    //   this.session._last_header_name = 'ZRINIT'
+    //   this.session.close?.()
+    // }
+  }
+
   consume(data: ArrayBuffer) {
     try {
-      this.sentry.consume(data)
+      this.sentry?.consume(data)
     } catch (e) {
       log.error('zmodem consume error: ', e)
+      this.closeSession()
       this.reset()
     }
   }
@@ -57,23 +68,28 @@ export class ZmodemAddon implements ITerminalAddon {
     }
   }
 
-  // private addDisposableListener(target: EventTarget, type: string, listener: EventListener) {
-  //   target.addEventListener(type, listener)
-  //   this.disposables.push({ dispose: () => target.removeEventListener(type, listener) })
-  // }
+  // 是否在上传中
+  sending = false
+
+  // 当前上传 byte 数
+  sendingCount = 0
 
   private zmodemInit = (terminal: Terminal) => {
-    const { sender, writer } = this.options
+    const { sender } = this.options
     const { reset, zmodemDetect } = this
-    this.session = null
+
     this.sentry = new Zmodem.Sentry({
       to_terminal: (octets: any) => {
-        log.info('zmodem to terminal', octets)
-        writer(new Uint8Array(octets))
+        this.writeToTerminal(new Uint8Array(octets))
       },
       sender: (octets: any) => {
-        log.info('sender')
-        sender(new Uint8Array(octets))
+        const buffer = new Uint8Array(octets)
+        if (this.sending) {
+          log.info('sending', buffer.byteLength)
+          // console.log('buffer', Buffer.from(octets).toString('utf8'))
+          this.sendingCount += buffer.byteLength
+        }
+        sender(buffer)
       },
       on_retract: () => reset(),
       on_detect: (detection: any) => zmodemDetect(detection),
@@ -81,83 +97,129 @@ export class ZmodemAddon implements ITerminalAddon {
     this.disposables.push(
       terminal.onKey((e) => {
         const event = e.domEvent
+        if (event.ctrlKey) log.success('on ctrl Key')
         if (event.ctrlKey && event.key === 'c') {
-          if (this.denier) this.denier()
+          log.warn('cancel')
+          if (this.denier) {
+            log.warn('denier')
+            // 取消下载时双重 deny 才生效
+            this.denier()
+            this.denier()
+            // this.session?.close?.()
+          }
         }
       }),
     )
   }
 
-  private zmodemDetect = (detection: Zmodem.Detection): void => {
+  private zmodemDetect = (detection: any): void => {
     const { disableStdIn, receiveFile } = this
-    disableStdIn()
+    // disableStdIn()
 
     this.denier = () => detection.deny()
-    this.session = detection.confirm()
-    this.session.on('session_end', () => {
-      console.log('session end')
+    const session = detection.confirm()
+    this.session = session
+    session.on('session_end', () => {
+      console.log('session closed')
+      // this.sendSession = null
+      // this.reveiveSession = null
       this.reset()
     })
 
     log.info('detection', detection)
-    log.info('type', this.session.type)
+    log.info('type', session.type)
 
-    if (this.session.type === 'send') {
+    if (session.type === 'send') {
       this.options.onSend()
     } else {
+      this.reveiveSession = session
       receiveFile()
     }
   }
 
-  public closeSession = () => {
-    console.log('close session')
-    this.session?.close()
-    this.denier?.()
-  }
-
   public sendFile = (files: FileList) => {
-    const { session, writeProgress } = this
-    Zmodem.Browser.send_files(session, files, {
-      on_progress: (_: any, offer: any) => writeProgress(offer),
-    })
-      .then(() => session.close())
-      .catch(() => this.reset())
+    const { session, writeProgressToTerminal } = this
+    if (!session || session._aborted) return
+    const fileSize = [...files].reduce((prev, file) => prev + file.size, 0)
+    this.sending = true
+    log.success('upload file')
+    // this.writeToTerminal('正在上传文件\r')
+    try {
+      Zmodem.Browser.send_files(session, files, {
+        // on_progress: (_: any, offer: any) => writeProgress(offer),
+        // on_offer_response: (f, offer) => {
+        //   console.log('offer', offer, new Date().toLocaleString())
+        //   if (offer) {
+        //     // offer.on('send_progress', (info) => {
+        //     //   const { file, offset, total } = info
+        //     //   log.success('upload percent', info, new Date().toLocaleString())
+        //     //   writeProgressToTerminal(file.name, offset, total)
+        //     // })
+        //   }
+        // },
+      })
+        .then(() => {
+          log.success('send file success')
+          session.close()
+        })
+        .catch((e) => {
+          log.error('send file error', e)
+          this.reset()
+        })
+        .finally(() => {
+          console.log('this.sendingCount', this.sendingCount, fileSize)
+          this.sending = false
+          this.sendingCount = 0
+        })
+    } catch (e) {
+      log.error('error', e)
+    }
   }
 
   private receiveFile = () => {
     const { session, writeProgress } = this
-
-    console.log('receive file')
+    if (!session || session._aborted) return
     session.on('offer', (offer: any) => {
-      console.log('offer', offer)
+      // const size = offer._file_info.size
+      // const name = offer._file_info.name
+      // if (size > 200 * 1024 * 1024) {
+      //   log.error('download over limit')
+      //   this.denier?.()
+      //   return
+      // }
       offer.on('input', () => writeProgress(offer))
       offer
         .accept()
         .then((payloads: any) => {
-          console.log('payloads', payloads)
-          const blob = new Blob(payloads, { type: 'application/octet-stream' })
-          saveAs(blob, offer.get_details().name)
+          log.success('download success')
+          Zmodem.Browser.save_to_disk(payloads, offer.get_details().name)
         })
         .catch(() => this.reset())
-    })
-
-    session.on('session_end', () => {
-      console.log('session end')
-      this.reset()
     })
 
     session.start()
   }
 
-  private writeProgress = (offer: Zmodem.Offer) => {
-    const { bytesHuman } = this
+  private writeProgress = (offer: any) => {
     const file = offer.get_details()
     const name = file.name
     const size = file.size
     const offset = offer.get_offset()
-    const percent = ((100 * offset) / size).toFixed(2)
+    this.writeProgressToTerminal(name, offset, size)
+  }
 
-    this.options.writer(`${name} ${percent}% ${bytesHuman(offset, 2)}/${bytesHuman(size, 2)}\r`)
+  private writeProgressToTerminal = (name: string, offset: number, size: number) => {
+    const { bytesHuman } = this
+    const percent = ((100 * offset) / size).toFixed(2)
+    const message = `${name} ${percent}% ${bytesHuman(offset, 2)}/${bytesHuman(size, 2)}\r`
+    this.writeToTerminal(message)
+    if (Number(percent) === 100) {
+      this.writeToTerminal(`正在合成文件 ${name}\r`)
+    }
+  }
+
+  private writeToTerminal(data: string | Uint8Array) {
+    this.terminal?.write(data)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

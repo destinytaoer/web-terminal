@@ -2,7 +2,7 @@ lockfileVersion: '6.0'
 
 patchedDependencies:
   zmodem.js@0.1.10:
-    hash: 5mslwluca7nkd2xwkpbuxuspim
+    hash: syngie7lp2urj6n3bpx6rhwsju
     path: patches/zmodem.js@0.1.10.patch
 
 importers:
@@ -128,6 +128,9 @@ importers:
 
   packages/core:
     dependencies:
+      buffer:
+        specifier: ^6.0.3
+        version: 6.0.3
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -149,9 +152,12 @@ importers:
       xterm-addon-webgl:
         specifier: ^0.14.0
         version: 0.14.0(xterm@5.1.0)
+      zmodem:
+        specifier: workspace:*
+        version: link:../zmodem
       zmodem.js:
         specifier: ^0.1.10
-        version: 0.1.10(patch_hash=5mslwluca7nkd2xwkpbuxuspim)
+        version: 0.1.10(patch_hash=syngie7lp2urj6n3bpx6rhwsju)
     devDependencies:
       '@types/file-saver':
         specifier: ^2.0.5
@@ -169,6 +175,19 @@ importers:
   packages/tsconfig: {}
 
   packages/worker-timer:
+    devDependencies:
+      tsconfig:
+        specifier: workspace:*
+        version: link:../tsconfig
+      typescript:
+        specifier: ^4.9.3
+        version: 4.9.5
+
+  packages/zmodem:
+    dependencies:
+      crc-32:
+        specifier: 1.1.1
+        version: 1.1.1
     devDependencies:
       tsconfig:
         specifier: workspace:*
@@ -1315,10 +1334,13 @@ packages:
       toggle-selection: 1.0.6
     dev: false
 
-  /crc-32@1.2.2:
-    resolution: {integrity: sha512-ROmzCKrTnOwybPcJApAA6WBWij23HVfGVNKqqrZpuyZOHqK2CwHSvpGuyt/UNNvaIjEd8X5IFGp4Mh+Ie1IHJQ==}
+  /crc-32@1.1.1:
+    resolution: {integrity: sha512-DWXuRN3Wtu43YRfYZ9r17720WZqM0caEjIfT6Dk1J/3sAxIyyXbUWqIACbz3cjV8l7guJRW+9pZlYMluKJ69wg==}
     engines: {node: '>=0.8'}
     hasBin: true
+    dependencies:
+      exit-on-epipe: 1.0.1
+      printj: 1.1.2
     dev: false
 
   /cross-spawn@7.0.3:
@@ -1568,6 +1590,11 @@ packages:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
     dev: true
+
+  /exit-on-epipe@1.0.1:
+    resolution: {integrity: sha512-h2z5mrROTxce56S+pnvAV890uu7ls7f1kEvVGJbw1OlFH3/mlJ5bkXu0KRyW94v37zzHPiUd55iLn3DA7TjWpw==}
+    engines: {node: '>=0.8'}
+    dev: false
 
   /fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
@@ -2321,6 +2348,12 @@ packages:
     engines: {node: '>=10.13.0'}
     hasBin: true
     dev: true
+
+  /printj@1.1.2:
+    resolution: {integrity: sha512-zA2SmoLaxZyArQTOPj5LXecR+RagfPSU5Kw1qP+jkWeNlrq+eJZyY2oS68SU1Z/7/myXM4lo9716laOFAVStCQ==}
+    engines: {node: '>=0.8'}
+    hasBin: true
+    dev: false
 
   /pstree.remy@1.1.8:
     resolution: {integrity: sha512-77DZwxQmxKnu3aR542U+X8FypNzbfJ+C5XQDk3uWjWxn6151aIMGthWYRXTqT1E5oJvg+ljaa2OJi+VfvCOQ8w==}
@@ -3467,9 +3500,9 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
-  /zmodem.js@0.1.10(patch_hash=5mslwluca7nkd2xwkpbuxuspim):
+  /zmodem.js@0.1.10(patch_hash=syngie7lp2urj6n3bpx6rhwsju):
     resolution: {integrity: sha512-Z1DWngunZ/j3BmIzSJpFZVNV73iHkj89rxXX4IciJdU9ga3nZ7rJ5LkfjV/QDsKhc7bazDWTTJCLJ+iRXD82dw==}
     dependencies:
-      crc-32: 1.2.2
+      crc-32: 1.1.1
     dev: false
     patched: true

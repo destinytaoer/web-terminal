@@ -6,7 +6,7 @@ import { CanvasAddon } from 'xterm-addon-canvas'
 import { WebglAddon } from 'xterm-addon-webgl'
 import { AttachAddon, AttachAddonOptions } from './AttachAddon'
 import { detectWebGLContext, log } from './utils'
-import { ZmodemAddon } from './ZmodemAddon.ts'
+import { ZmodemAddon } from './ZmodemAddon'
 
 export interface WebTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'
@@ -149,7 +149,7 @@ export class WebTerminal {
   }
 
   cancelUploadFile() {
-    this.zmodemAddon?.closeSession()
+    this.zmodemAddon?.denier()
   }
 
   sendFiles(files: FileList) {
@@ -167,7 +167,7 @@ export class WebTerminal {
         }
       },
       sender,
-      writer: write,
+      // writer: write,
     })
     this.loadAddon(this.zmodemAddon)
   }
@@ -185,13 +185,8 @@ export class WebTerminal {
         this.write(data)
       } else {
         // zmodemAddon 只消费二进制数据
-        console.log('zmodem consume', data)
-        try {
-          this.zmodemAddon?.consume(data)
-        } catch (e) {
-          log.error('zmodem consume error', e)
-          this.zmodemAddon?.closeSession()
-        }
+        // console.log('zmodem consume', data)
+        this.zmodemAddon?.consume(data)
       }
     } else {
       this.write(data)
