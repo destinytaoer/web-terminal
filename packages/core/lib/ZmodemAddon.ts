@@ -137,27 +137,27 @@ export class ZmodemAddon implements ITerminalAddon {
     const { session, writeProgress, writeProgressToTerminal } = this
     if (!session || session.aborted()) return
     const fileSize = [...files].reduce((prev, file) => prev + file.size, 0)
+    const fileName = files[0].name
 
-    log.success(`upload file, size: ${fileSize}`)
+    log.success(`upload file, size: ${fileSize}`, new Date().toLocaleString())
 
     try {
+      let count = 0
       // 使用 send_block_files 分片上传才有进度条, 并且解决了大文件上传报错的问题
       // https://github.com/FGasper/zmodemjs/issues/11
-      Zmodem.Browser.send_block_files(session, files, {
-        on_progress: (file, offer) => writeProgress(offer),
-        on_offer_response: (file, xfer) => {
-          log.success('on_offer_response', xfer)
-          if (xfer) {
-            // 准备上传
-            // this.xfer = xfer
-            // xfer.on('send_progress', (info) => {
-            //   const { file, offset, total } = info
-            //   log.info('upload percent', info, new Date().toLocaleString())
-            //   writeProgressToTerminal(file.name, offset, total)
-            // })
-          } else {
-            // 已经上传过了, 不再继续上传
-            this.writeToTerminal(file.name + ' has already been uploaded\r\n')
+      Zmodem.Browser.send_block_files(session as ZmodemSendSession, files, {
+        on_progress: (_, offer) => {
+          if (count === 0) {
+            this.terminal?.write('\r\n')
+            count++
+          }
+          const offset = offer.get_offset()
+          if (offset !== fileSize) {
+            writeProgress(offer)
+          } else if (count === 1) {
+            writeProgress(offer)
+            this.terminal?.write(`\r\nmerging file ${fileName}, please wait a moment\r\n`)
+            count++
           }
         },
         on_file_complete: () => {
@@ -165,7 +165,7 @@ export class ZmodemAddon implements ITerminalAddon {
         },
       })
         .then(() => {
-          log.success('send file success')
+          log.success('send file success', new Date().toLocaleString())
           session.close()
         })
         .catch((e: any) => {
@@ -192,11 +192,12 @@ export class ZmodemAddon implements ITerminalAddon {
       //   this.denier?.()
       //   return
       // }
+      log.success('start to download file', new Date().toLocaleString())
       offer.on('input', () => writeProgress(offer))
       offer
         .accept()
         .then((payloads: any) => {
-          log.success('download success')
+          log.success('download success', new Date().toLocaleString())
           Zmodem.Browser.save_to_disk(payloads, offer.get_details().name)
           // this.options.sender(new Uint8Array([79, 79]))
           // setTimeout(() => {
@@ -204,7 +205,7 @@ export class ZmodemAddon implements ITerminalAddon {
           //   session._on_session_end()
           //   this.denier()
           // })
-          // FIXME: sz 下载大文件时, 可能会导致终端卡住
+          // FIXME: sz 下载大文件时, 可能会导致终端卡住(未知, 偶现, 跟 lrzsz 版本无关, 不一定是大文件)
           // https://github.com/FGasper/zmodemjs/issues/33
           // setTimeout(() => {
           //   if (!session._has_ended()) {
@@ -215,6 +216,12 @@ export class ZmodemAddon implements ITerminalAddon {
           //     // session._bytes_after_OO = undefined
           //     // offer.skip()
           //     this.denier()
+          //   }
+          // }, 200)
+          // setTimeout(() => {
+          //   if (!session._has_ended()) {
+          //     log.warn('force end session')
+          //     // session._send_header('ZRINIT')
           //   }
           // }, 200)
           this.reset()
