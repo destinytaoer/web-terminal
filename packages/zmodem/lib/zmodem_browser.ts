@@ -1,6 +1,6 @@
 import { ZmodemError } from './zerror'
-import { Transfer, ZmodemSendSession, ZmodemSession } from "./zsession";
-import { Octets } from "@/pages/terminal/core/zmodem/encode";
+import { Transfer, ZmodemSendSession, ZmodemSession } from './zsession'
+import { Octets } from './encode'
 
 function _check_aborted(session: ZmodemSession) {
   if (session.aborted()) {
@@ -12,6 +12,10 @@ interface SendFileOptions {
   on_offer_response?: (file: File, xfer?: Transfer) => void
   on_progress?: (file: File, xfer: Transfer, chunk: Uint8Array) => void
   on_file_complete?: (file: File, xfer: Transfer) => void
+}
+
+interface SendBlockFileOptions extends SendFileOptions {
+  block?: number
 }
 
 interface FileObj {
@@ -151,6 +155,122 @@ export const Browser = {
           }
 
           reader.readAsArrayBuffer(cur_b.obj)
+        })
+      })
+    }
+
+    return promise_callback()
+  },
+
+  send_block_files: function send_block_files(session: ZmodemSendSession, files: FileList, options?: SendBlockFileOptions) {
+    if (!options) options = {}
+
+    //Populate the batch in reverse order to simplify sending
+    //the remaining files/bytes components.
+    var batch = []
+    var total_size = 0
+    for (var f = files.length - 1; f >= 0; f--) {
+      var fobj = files[f]
+      total_size += fobj.size
+      batch[f] = {
+        obj: fobj,
+        name: fobj.name,
+        size: fobj.size,
+        mtime: new Date(fobj.lastModified),
+        files_remaining: files.length - f,
+        bytes_remaining: total_size,
+      }
+    }
+
+    var file_idx = 0
+
+    function promise_callback() {
+      var cur_b = batch[file_idx]
+
+      if (!cur_b) {
+        return Promise.resolve() //batch done!
+      }
+
+      file_idx++
+
+      return session.send_offer(cur_b).then(function after_send_offer(xfer) {
+        if (options.on_offer_response) {
+          options.on_offer_response(cur_b.obj, xfer)
+        }
+
+        if (xfer === undefined) {
+          return promise_callback() //skipped
+        }
+
+        return new Promise(function (res) {
+          var block = options.block ?? 1024 * 1024
+          var fileSize = cur_b.size
+          var fileLoaded = 0
+          var reader = new FileReader()
+          reader.onerror = function reader_onerror(e) {
+            console.error('file read error', e)
+            throw 'File read error: ' + e
+          }
+
+          function readBlob() {
+            var blob
+            if (cur_b.obj.slice) {
+              blob = cur_b.obj.slice(fileLoaded, fileLoaded + block + 1)
+            } else if (cur_b.obj.mozSlice) {
+              blob = cur_b.obj.mozSlice(fileLoaded, fileLoaded + block + 1)
+            } else if (cur_b.obj.webkitSlice) {
+              blob = cur_b.obj.webkitSlice(fileLoaded, fileLoaded + block + 1)
+            } else {
+              blob = cur_b.obj
+            }
+            reader.readAsArrayBuffer(blob)
+          }
+
+          var piece
+          reader.onload = function reader_onload(e) {
+            try {
+              fileLoaded += e.total
+              if (fileLoaded < fileSize) {
+                if (e.target.result) {
+                  piece = new Uint8Array(e.target.result)
+                  _check_aborted(session)
+                  xfer.send(piece)
+                  if (options.on_progress) {
+                    options.on_progress(cur_b.obj, xfer, piece)
+                  }
+                }
+                readBlob()
+              } else {
+                // 上传完成
+                if (e.target.result) {
+                  piece = new Uint8Array(e.target.result)
+                  _check_aborted(session)
+                  xfer.end(piece).then(function () {
+                    // 放在内部, 即等待合成完再完成进度条
+                    // if (options.on_progress && piece.length) {
+                    //   options.on_progress(cur_b.obj, xfer, piece)
+                    // }
+                    if (options.on_file_complete) {
+                      options.on_file_complete(cur_b.obj, xfer)
+                    }
+
+                    // 继续下个文件的上传
+                    res(promise_callback())
+                  })
+                  // 先完成进度条, 再等待合成
+                  if (options.on_progress) {
+                    options.on_progress(cur_b.obj, xfer, piece)
+                  }
+                }
+              }
+            } catch (e) {
+              console.log('错误中断上传: ', e)
+              xfer.skip()
+              // session.abort()
+              // reader.abort()
+            }
+          }
+          readBlob()
         })
       })
     }

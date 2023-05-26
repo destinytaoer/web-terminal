@@ -44,7 +44,7 @@ const //pertinent to this module
   FORCE_ESCAPE_CTRL_CHARS = true,
   DEFAULT_RECEIVE_INPUT_MODE = 'spool_uint8array',
   //pertinent to ZMODEM
-  MAX_CHUNK_LENGTH = 8192, //1 KiB officially, but lrzsz allows 8192
+  MAX_CHUNK_LENGTH = 8192, //1 KiB officially, but lrzsz allows 8192 / 8KiB
   BS = 0x8,
   OVER_AND_OUT = [79, 79],
   ABORT_SEQUENCE = ZMLIB.ABORT_SEQUENCE
@@ -633,9 +633,9 @@ export class ZmodemReceiveSession extends ZmodemSession {
     this._on_data_in(subpacket)
 
     /*
-                console.warn("received error from data_in callback; retrying", e);
-                throw "unimplemented";
-                */
+                                                                                                            console.warn("received error from data_in callback; retrying", e);
+                                                                                                            throw "unimplemented";
+                                                                                                            */
 
     if (subpacket.ack_expected() && !subpacket.frame_end()) {
       this._send_header('ZACK', ENCODELIB.pack_u32_le(this._file_offset))
@@ -950,7 +950,7 @@ export class Transfer extends _Eventer {
     this._send = send_func
     this._end = end_func
 
-    this._Add_event('send_progress')
+    // this._Add_event('send_progress')
   }
 
   /**
@@ -1167,13 +1167,13 @@ export class ZmodemSendSession extends ZmodemSession {
     //queue up the ZSINIT flag to send -- but seems useless??
 
     /*
-                Object.assign(
-                    this._on_evt,
-                    {
-                        file_received: [],
-                    },
-                };
-                */
+                                                                                                            Object.assign(
+                                                                                                                this._on_evt,
+                                                                                                                {
+                                                                                                                    file_received: [],
+                                                                                                                },
+                                                                                                            };
+                                                                                                            */
   }
 
   /**
@@ -1461,20 +1461,20 @@ export class ZmodemSendSession extends ZmodemSession {
   }
 
   /*
-        Potential future support for responding to ZRPOS:
-        send_file_offset(offset) {
-        }
-        */
+                                                      Potential future support for responding to ZRPOS:
+                                                      send_file_offset(offset) {
+                                                      }
+                                                      */
 
   /*
-            Sending logic works thus:
-                - ASSUME the receiver can overlap I/O (CANOVIO)
-                    (so fail if !CANFDX || !CANOVIO)
-                - Sender opens the firehose … all ZCRCG (!end/!ack)
-                    until the end, when we send a ZCRCE (end/!ack)
-                    NB: try 8k/32k/64k chunk sizes? Looks like there’s
-                    no need to change the packet otherwise.
-        */
+                                                          Sending logic works thus:
+                                                              - ASSUME the receiver can overlap I/O (CANOVIO)
+                                                                  (so fail if !CANFDX || !CANOVIO)
+                                                              - Sender opens the firehose … all ZCRCG (!end/!ack)
+                                                                  until the end, when we send a ZCRCE (end/!ack)
+                                                                  NB: try 8k/32k/64k chunk sizes? Looks like there’s
+                                                                  no need to change the packet otherwise.
+                                                      */
 
   //TODO: Put this on a Transfer object similar to what Receive uses?
   _send_interim_file_piece(bytes_obj) {
@@ -1599,24 +1599,24 @@ export class ZmodemSendSession extends ZmodemSession {
       this._file_offset += chunk_size
       obj_offset += chunk_size
 
-      // if (obj_offset >= bytes_count) break;
-      if (this._current_transfer) {
-        this._current_transfer._Happen('send_progress', {
-          file: this._current_transfer._file_info,
-          offset: obj_offset,
-          total: bytes_count,
-        })
-      }
-
-      if (obj_offset >= bytes_count) {
-        this._current_transfer._Happen('send_progress', {
-          file: this._current_transfer._file_info,
-          offset: bytes_count,
-          total: bytes_count,
-        })
-        this._current_transfer = null
-        break
-      }
+      if (obj_offset >= bytes_count) break
+      // if (this._current_transfer) {
+      //   this._current_transfer._Happen('send_progress', {
+      //     file: this._current_transfer._file_info,
+      //     offset: Math.min(obj_offset, bytes_count),
+      //     total: bytes_count,
+      //   })
+      // }
+      //
+      // if (obj_offset >= bytes_count) {
+      //   // this._current_transfer?._Happen('send_progress', {
+      //   //   file: this._current_transfer._file_info,
+      //   //   offset: bytes_count,
+      //   //   total: bytes_count,
+      //   // })
+      //   // this._current_transfer = null
+      //   break
+      // }
     }
   }
 

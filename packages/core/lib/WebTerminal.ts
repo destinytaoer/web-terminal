@@ -1,12 +1,12 @@
 import { debounce } from 'lodash'
 import { ITerminalAddon, ITerminalOptions, Terminal } from 'xterm'
+import { CanvasAddon } from 'xterm-addon-canvas'
 import { FitAddon } from 'xterm-addon-fit'
 import { WebLinksAddon } from 'xterm-addon-web-links'
-import { CanvasAddon } from 'xterm-addon-canvas'
 import { WebglAddon } from 'xterm-addon-webgl'
 import { AttachAddon, AttachAddonOptions } from './AttachAddon'
 import { detectWebGLContext, log } from './utils'
-import { ZmodemAddon } from './ZmodemAddon'
+import { ZmodemAddon, ZmodeOptions } from './ZmodemAddon'
 
 export interface WebTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'
@@ -14,9 +14,7 @@ export interface WebTerminalOptions {
   xtermOptions?: ITerminalOptions
 }
 
-export interface ConnectSocketOptions extends Omit<AttachAddonOptions, 'writer'> {
-  onSend?: () => void
-}
+export type ConnectSocketOptions = Omit<AttachAddonOptions, 'writer'> & Omit<ZmodeOptions, 'sender'>
 
 /**
  * ● init terminal
@@ -96,6 +94,7 @@ export class WebTerminal {
   }
 
   connectSocket(url: string, protocols?: string | string[], options?: ConnectSocketOptions) {
+    const { processMessageToServer, processMessageFromServer, ...zmodemOptions } = options ?? {}
     const attachAddon = new AttachAddon(url, protocols ?? [], {
       processMessageToServer: options?.processMessageToServer,
       processMessageFromServer: options?.processMessageFromServer,
@@ -104,8 +103,9 @@ export class WebTerminal {
 
     if (this.options.enableZmodem) {
       log.info('enable zmodem')
-      this.loadZmodem(options?.onSend)
+      this.loadZmodem(zmodemOptions)
     }
+
     // loadAddon 的时候调用 addon 的 activate, 传入 terminal
     this.loadAddon(attachAddon)
 
@@ -149,25 +149,23 @@ export class WebTerminal {
   }
 
   cancelUploadFile() {
-    this.zmodemAddon?.denier()
+    this.zmodemAddon?.closeSession()
   }
 
   sendFiles(files: FileList) {
     this.zmodemAddon?.sendFile(files)
   }
 
-  private loadZmodem(onSend?: () => void) {
-    const { sender, write } = this
+  private loadZmodem(options: Omit<ZmodeOptions, 'sender'>) {
+    const { onSend, onReceiveOverLimit, receiveLimit } = options
+    const { sender } = this
     this.zmodemAddon = new ZmodemAddon({
       onSend: () => {
-        if (onSend) {
-          onSend()
-        } else {
-          log.error('you must pass onSend options when connect socket if you want to use zmodem')
-        }
+        onSend?.()
       },
       sender,
-      // writer: write,
+      onReceiveOverLimit,
+      receiveLimit,
     })
     this.loadAddon(this.zmodemAddon)
   }
@@ -185,7 +183,6 @@ export class WebTerminal {
         this.write(data)
       } else {
         // zmodemAddon 只消费二进制数据
-        // console.log('zmodem consume', data)
         this.zmodemAddon?.consume(data)
       }
     } else {

@@ -51,6 +51,9 @@ export class Logger {
   constructor(private scope: string, private env: 'prod' | 'dev' = 'prod') {}
 
   private log(type: 'info' | 'success' | 'error' | 'warn', ...args: any[]) {
+    if (type === 'error') console.error(`[${this.scope}]`, ...args)
+    if (type === 'warn') console.warn(`[${this.scope}]`, ...args)
+    if (type === 'success') console.log(`[${this.scope}]`, ...args)
     if (this.env === 'prod') return
     console.debug(
       `%c ${this.scope} %c ${type.toUpperCase()} `,
