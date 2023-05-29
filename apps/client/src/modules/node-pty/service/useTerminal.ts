@@ -12,9 +12,7 @@ export const useTerminal = () => {
   const params = useParams()
 
   const terminal = useCreation(() => {
-    return new WebTerminal({
-      enableZmodem: true,
-    })
+    return new WebTerminal()
   }, [])
 
   // terminal 初始化
@@ -49,6 +47,8 @@ export const useTerminal = () => {
       const socket = terminal.connectSocket(urlWithQuery, [], {
         processMessageToServer,
         processMessageFromServer,
+        enableZmodem: true,
+        enableTrzsz: true,
         onSend() {
           log.success('onSend')
           uploadFile()

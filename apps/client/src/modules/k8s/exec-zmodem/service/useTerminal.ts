@@ -9,9 +9,7 @@ const token = 'YVK5BTRG4KSodSt7HMgvVnGpSe3bH0GSdeqaKUUqmL0.kYuoG9v5psIyTaSs5KBLM
 export const useTerminal = () => {
   const terminalEl = useRef<HTMLDivElement>(null)
   const terminal = useCreation(() => {
-    return new WebTerminal({
-      enableZmodem: true,
-    })
+    return new WebTerminal({})
   }, [])
 
   useEffect(() => {
@@ -26,6 +24,8 @@ export const useTerminal = () => {
       const socket = terminal.connectSocket(urlWithQuery, [k8s.protocol.binary], {
         processMessageToServer,
         processMessageFromServer,
+        enableZmodem: true,
+        enableTrzsz: true,
         onSend: () => {
           selectFile()
             .then((files) => {

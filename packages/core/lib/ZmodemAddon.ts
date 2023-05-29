@@ -1,10 +1,13 @@
 import { IDisposable, ITerminalAddon, Terminal } from 'xterm'
 import { log } from './utils'
 import { Zmodem, Detection, Octets, ZmodemSendSession, ZmodemSentry, ZmodemSession } from 'zmodem'
+import { TrzszFilter } from 'trzsz'
 
 // import * as Zmodem from 'zmodem.js/src/zmodem_browser'
 
 export interface ZmodeOptions {
+  enableZmodem?: boolean
+  enableTrzsz?: boolean
   onSend: () => void
   sender: (data: string | Uint8Array) => void
   onReceiveOverLimit?: (name: string, size: number) => void
@@ -26,12 +29,15 @@ export class ZmodemAddon implements ITerminalAddon {
 
   private denier?: () => void
 
+  private trzszFilter: TrzszFilter
+
   constructor(private options: ZmodeOptions) {}
 
   activate(terminal: Terminal) {
     this.terminal = terminal
     // Zmodem.setDebug(true)
-    this.zmodemInit(terminal)
+    if (this.options.enableZmodem) this.zmodemInit(terminal)
+    if (this.options.enableTrzsz) this.trzszInit(terminal)
   }
 
   closeSession() {
@@ -40,10 +46,14 @@ export class ZmodemAddon implements ITerminalAddon {
 
   consume(data: ArrayBuffer) {
     try {
-      this.sentry?.consume(data)
+      if (this.options.enableTrzsz) {
+        this.trzszFilter.processServerOutput(data)
+      } else {
+        console.log('sentry consume data', data)
+        this.sentry?.consume(data)
+      }
     } catch (e) {
       log.error('zmodem consume error: ', e)
-      this.closeSession()
       this.reset()
     }
   }
@@ -68,9 +78,41 @@ export class ZmodemAddon implements ITerminalAddon {
     }
   }
 
-  // private xfer?: Transfer | null
+  private trzszInit = (terminal: Terminal) => {
+    console.log('trzsz init')
+    const { sender, enableZmodem } = this.options
+    this.trzszFilter = new TrzszFilter({
+      writeToTerminal: (data) => {
+        if (!this.trzszFilter.isTransferringFiles() && enableZmodem) {
+          this.sentry.consume(data)
+        } else {
+          this.writeToTerminal(typeof data === 'string' ? data : new Uint8Array(data as ArrayBuffer))
+        }
+      },
+      sendToServer: (data) => sender(data),
+      terminalColumns: terminal.cols,
+      isWindowsShell: false,
+      chooseSendFiles() {},
+    })
+    // TODO: 拖拽上传下载
+    // const element = terminal.element as EventTarget;
+    // this.addDisposableListener(element, 'dragover', event => event.preventDefault());
+    // this.addDisposableListener(element, 'drop', event => {
+    //   event.preventDefault();
+    //   this.trzszFilter
+    //       .uploadFiles((event as DragEvent).dataTransfer?.items as DataTransferItemList)
+    //       .then(() => console.log('[ttyd] upload success'))
+    //       .catch(err => console.log('[ttyd] upload failed: ' + err));
+    // });
+    this.disposables.push(terminal.onResize((size) => this.trzszFilter.setTerminalColumns(size.cols)))
+    // forward the user input to TrzszFilter
+    // this.disposables.push(terminal.onData((data) => this.trzszFilter.processTerminalInput(data)))
+    // forward binary input to TrzszFilter
+    // this.disposables.push(terminal.onBinary((data) => this.trzszFilter.processBinaryInput(data)))
+  }
 
   private zmodemInit = (terminal: Terminal) => {
+    console.log('zmodem init')
     const { sender } = this.options
     const { reset, zmodemDetect } = this
 
@@ -90,8 +132,7 @@ export class ZmodemAddon implements ITerminalAddon {
       on_retract: () => reset(),
       on_detect: (detection: any) => zmodemDetect(detection),
     })
-    // TODO: 取消功能
-    // FIXME: 上传取消可能导致卡住
+    // FIXME: lrzsz 上传取消可能导致卡住
     // this.disposables.push(
     //   terminal.onKey((e) => {
     //     const event = e.domEvent

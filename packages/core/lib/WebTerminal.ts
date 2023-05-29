@@ -10,7 +10,6 @@ import { ZmodemAddon, ZmodeOptions } from './ZmodemAddon'
 
 export interface WebTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'
-  enableZmodem?: boolean
   xtermOptions?: ITerminalOptions
 }
 
@@ -55,7 +54,6 @@ export class WebTerminal {
   constructor(options: WebTerminalOptions = {}) {
     this.options = {
       rendererType: 'webgl',
-      enableZmodem: false,
       ...options,
     }
   }
@@ -95,16 +93,17 @@ export class WebTerminal {
 
   connectSocket(url: string, protocols?: string | string[], options?: ConnectSocketOptions) {
     const { processMessageToServer, processMessageFromServer, ...zmodemOptions } = options ?? {}
+
+    if (options?.enableZmodem || options?.enableTrzsz) {
+      log.info('enable zmodem')
+      this.loadZmodem(zmodemOptions)
+    }
+
     const attachAddon = new AttachAddon(url, protocols ?? [], {
       processMessageToServer: options?.processMessageToServer,
       processMessageFromServer: options?.processMessageFromServer,
       writer: this.writer,
     })
-
-    if (this.options.enableZmodem) {
-      log.info('enable zmodem')
-      this.loadZmodem(zmodemOptions)
-    }
 
     // loadAddon 的时候调用 addon 的 activate, 传入 terminal
     this.loadAddon(attachAddon)
@@ -157,7 +156,7 @@ export class WebTerminal {
   }
 
   private loadZmodem(options: Omit<ZmodeOptions, 'sender'>) {
-    const { onSend, onReceiveOverLimit, receiveLimit } = options
+    const { onSend, onReceiveOverLimit, receiveLimit, enableZmodem, enableTrzsz } = options
     const { sender } = this
     this.zmodemAddon = new ZmodemAddon({
       onSend: () => {
@@ -166,17 +165,11 @@ export class WebTerminal {
       sender,
       onReceiveOverLimit,
       receiveLimit,
+      enableZmodem,
+      enableTrzsz,
     })
     this.loadAddon(this.zmodemAddon)
-  }
-
-  private sender = (data: string | Uint8Array) => {
-    this.socket?.sendMessage('data', data)
-  }
-
-  // 用于 socket 消息写入 terminal
-  private writer = (data: string | Uint8Array) => {
-    if (this.options.enableZmodem) {
+    this.writer = (data: string | Uint8Array) => {
       // 将数据经过 zmodem 检测之后再输出
       if (typeof data === 'string') {
         log.warn('enableZmodem need to use binary message')
@@ -185,9 +178,16 @@ export class WebTerminal {
         // zmodemAddon 只消费二进制数据
         this.zmodemAddon?.consume(data)
       }
-    } else {
-      this.write(data)
     }
+  }
+
+  private sender = (data: string | Uint8Array) => {
+    this.socket?.sendMessage('data', data)
+  }
+
+  // 用于 socket 消息写入 terminal
+  private writer = (data: string | Uint8Array) => {
+    this.write(data)
   }
 
   private initRenderer() {

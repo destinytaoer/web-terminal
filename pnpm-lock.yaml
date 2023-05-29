@@ -140,6 +140,9 @@ importers:
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
+      trzsz:
+        specifier: ^1.1.0
+        version: 1.1.0
       xterm:
         specifier: ^5.1.0
         version: 5.1.0
@@ -3243,6 +3246,11 @@ packages:
     dependencies:
       nopt: 1.0.10
     dev: true
+
+  /trzsz@1.1.0:
+    resolution: {integrity: sha512-KKlAAHyEfp+hGRC7ss4bZBGayV50QmfUuati1COSx4j6XZKmlUfl+SFJrrasCUsjlAiu9ALO0fUuqBshdm2zUA==}
+    hasBin: true
+    dev: false
 
   /ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}

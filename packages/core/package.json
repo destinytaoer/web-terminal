@@ -7,13 +7,14 @@
     "buffer": "^6.0.3",
     "file-saver": "^2.0.5",
     "lodash": "^4.17.21",
+    "trzsz": "^1.1.0",
     "xterm": "^5.1.0",
     "xterm-addon-canvas": "^0.3.0",
     "xterm-addon-fit": "^0.7.0",
     "xterm-addon-web-links": "^0.8.0",
     "xterm-addon-webgl": "^0.14.0",
-    "zmodem.js": "^0.1.10",
-    "zmodem": "workspace:*"
+    "zmodem": "workspace:*",
+    "zmodem.js": "^0.1.10"
   },
   "devDependencies": {
     "@types/file-saver": "^2.0.5",
