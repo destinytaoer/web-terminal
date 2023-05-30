@@ -7,6 +7,7 @@ import { WebglAddon } from 'xterm-addon-webgl'
 import { AttachAddon, AttachAddonOptions } from './AttachAddon'
 import { detectWebGLContext, log } from './utils'
 import { ZmodemAddon, ZmodeOptions } from './ZmodemAddon'
+import { TrzszAddon } from './TrzszAddon.ts'
 
 export interface WebTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'
@@ -94,12 +95,14 @@ export class WebTerminal {
   connectSocket(url: string, protocols?: string | string[], options?: ConnectSocketOptions) {
     const { processMessageToServer, processMessageFromServer, ...zmodemOptions } = options ?? {}
 
-    if (options?.enableZmodem || options?.enableTrzsz) {
-      log.info('enable zmodem')
-      this.loadZmodem(zmodemOptions)
-    }
+    // if (options?.enableZmodem || options?.enableTrzsz) {
+    //   log.info('enable trzsz')
+    //   this.loadZmodem(zmodemOptions)
+    // }
 
-    const attachAddon = new AttachAddon(url, protocols ?? [], {
+    const Cons = options?.enableTrzsz ? TrzszAddon : AttachAddon
+
+    const attachAddon = new Cons(url, protocols ?? [], {
       processMessageToServer: options?.processMessageToServer,
       processMessageFromServer: options?.processMessageFromServer,
       writer: this.writer,
