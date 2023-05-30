@@ -1,4 +1,4 @@
-import { TrzszOptions } from 'trzsz'
+import { Detection, TrzszOptions } from 'trzsz'
 import { TrzszFilter } from 'trzsz'
 import { Terminal, IDisposable, ITerminalAddon } from 'xterm'
 import { addSocketListener } from './utils'
@@ -85,6 +85,15 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
     this.processMessageFromServer = options?.processMessageFromServer ?? this.processMessageFromServer
   }
 
+  sendMessage<T extends MessageType>(type: T, data?: any) {
+    if (this._checkOpenSocket()) {
+      const message = this.processMessageToServer({ type, content: data })
+      if (message) {
+        this.send(message)
+      }
+    }
+  }
+
   /**
    * Upload files or directories to the server.
    * @param {string[] | DataTransferItemList} items - The files or directories to upload.
@@ -116,13 +125,33 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
       chooseSaveDirectory: this.options.chooseSaveDirectory,
       terminalColumns: terminal.cols,
       isWindowsShell: this.options.isWindowsShell,
+      onDetect: this.onDetect,
     })
 
     this.attachSocket(this)
     this.attachTerminal(terminal)
   }
 
-  attachSocket(socket: WebSocket) {
+  private onDetect = async (detection: Detection) => {
+    const { mode, version, remoteIsWindows } = detection
+
+    if (mode === 'S') {
+      // 下载文件
+      await this.trzsz.handleTrzszDownloadFiles(version, remoteIsWindows)
+    } else if (mode === 'R') {
+      // 上传文件
+      await this.trzsz.handleTrzszUploadFiles(version, false, remoteIsWindows)
+    } else if (mode === 'D') {
+      // TODO: 暂不支持上传目录提示
+      console.log('不能上传目录')
+      // 取消上传
+      await this.trzsz.cancelTransfer(remoteIsWindows)
+      // 上传目录
+      // await this.trzsz.handleTrzszUploadFiles(version, true, remoteIsWindows)
+    }
+  }
+
+  private attachSocket(socket: WebSocket) {
     // 建立连接后获取焦点
     // this._disposables.push(addSocketListener(socket, 'open', () => this.terminal?.focus()))
     this._disposables.push(addSocketListener(socket, 'message', (ev) => this.onMessage(ev.data)))
@@ -130,7 +159,7 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
     this._disposables.push(addSocketListener(socket, 'error', () => this.dispose()))
   }
 
-  attachTerminal(terminal: Terminal) {
+  private attachTerminal(terminal: Terminal) {
     this._disposables.push(terminal.onData((data) => this.trzsz.processTerminalInput(data)))
     this._disposables.push(terminal.onBinary((data) => this.trzsz.processBinaryInput(data)))
     this._disposables.push(
@@ -141,23 +170,14 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
     )
   }
 
-  consume(data: string | ArrayBuffer) {
+  private consume(data: string | ArrayBuffer) {
     this.trzsz.processServerOutput(data)
   }
 
-  onMessage(data: string | ArrayBuffer) {
+  private onMessage(data: string | ArrayBuffer) {
     const message = this.processMessageFromServer(data)
     if (message) {
       this.consume(message)
-    }
-  }
-
-  sendMessage<T extends MessageType>(type: T, data?: any) {
-    if (this._checkOpenSocket()) {
-      const message = this.processMessageToServer({ type, content: data })
-      if (message) {
-        this.send(message)
-      }
     }
   }
 
