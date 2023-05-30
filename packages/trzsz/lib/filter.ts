@@ -1,6 +1,6 @@
 import * as browser from './browser'
 import { TrzszError } from './comm'
-import { Detection, TrzszOptions } from './options'
+import { Detection, TrzszConfig, TrzszOptions } from './options'
 import { TrzszTransfer } from './transfer'
 import { TextProgressBar } from './progress'
 import { parseDataTransferItemList } from './drag'
@@ -133,10 +133,14 @@ export class TrzszFilter {
   public processTerminalInput(input: string): void {
     if (this.isTransferringFiles()) {
       if (input === '\x03') {
+        console.log('transferring: terminal input ctrl + c to stop frontend')
         // `ctrl + c` to stop transferring files
         this.stopTransferringFiles()
       }
       return // ignore input while transferring files
+    }
+    if (input === '\x03') {
+      console.log('terminal input ctrl + c to stop backend')
     }
     this.sendToServer(input)
   }
@@ -375,12 +379,29 @@ export class TrzszFilter {
     await this.trzszTransfer.clientExit(`Received ${remoteNames.join(', ')}`)
   }
 
+  // 拒绝文件
   public async cancelTransfer(remoteIsWindows: boolean) {
     await this.trzszTransfer.sendAction(false, remoteIsWindows)
   }
 
+  // 接受文件
   public async acceptTransfer(remoteIsWindows: boolean) {
-    await this.trzszTransfer.sendAction(false, remoteIsWindows)
+    await this.trzszTransfer.sendAction(true, remoteIsWindows)
     return this.trzszTransfer
+  }
+
+  // 抛出错误来实现中断
+  // message 自定义中断消息
+  // type 不能是 fail/FAIL/EXIT
+  public throwError(message: string, type?: string) {
+    throw new TrzszError(message, type)
+  }
+
+  // 初始化进度条
+  public initProgressBar(tmux_pane_width?: number, fileCount?: number) {
+    this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns, tmux_pane_width)
+    if (fileCount) {
+      this.textProgressBar.onNum(fileCount)
+    }
   }
 }

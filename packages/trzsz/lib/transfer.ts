@@ -14,6 +14,7 @@ import {
   TrzszFileWriter,
   ProgressCallback,
 } from './comm'
+import type { TrzszConfig } from './options'
 
 /* eslint-disable require-jsdoc */
 
@@ -26,7 +27,7 @@ export class TrzszTransfer {
   private openedFiles: TrzszFile[] = []
   private tmuxOutputJunk: boolean = false
   private cleanTimeoutInMilliseconds: number = 100
-  private transferConfig: any = {}
+  private transferConfig: TrzszConfig = {}
   private stopped: boolean = false
   private maxChunkTimeInMilliseconds: number = 0
   private protocolNewline: string = '\n'
@@ -417,7 +418,7 @@ export class TrzszTransfer {
     return remoteNames
   }
 
-  private async recvFileNum(progressCallback: ProgressCallback) {
+  public async recvFileNum(progressCallback?: ProgressCallback) {
     const num = await this.recvInteger('NUM')
     await this.sendInteger('SUCC', num)
     if (progressCallback) {
@@ -426,7 +427,7 @@ export class TrzszTransfer {
     return num
   }
 
-  private async recvFileName(saveParam: any, openSaveFile: OpenSaveFile, directory: boolean, overwrite: boolean, progressCallback: ProgressCallback) {
+  public async recvFileName(saveParam: any, openSaveFile: OpenSaveFile, directory: boolean, overwrite: boolean, progressCallback: ProgressCallback) {
     const fileName = await this.recvString('NAME')
     const file = await openSaveFile(saveParam, fileName, directory, overwrite)
     await this.sendString('SUCC', file.getLocalName())
@@ -436,7 +437,7 @@ export class TrzszTransfer {
     return file
   }
 
-  private async recvFileSize(progressCallback: ProgressCallback) {
+  public async recvFileSize(progressCallback: ProgressCallback) {
     const fileSize = await this.recvInteger('SIZE')
     await this.sendInteger('SUCC', fileSize)
     if (progressCallback) {
@@ -445,7 +446,7 @@ export class TrzszTransfer {
     return fileSize
   }
 
-  private async recvFileData(
+  public async recvFileData(
     file: TrzszFileWriter,
     size: number,
     binary: boolean,
@@ -492,7 +493,7 @@ export class TrzszTransfer {
     }
   }
 
-  public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback: ProgressCallback) {
+  public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback?: ProgressCallback) {
     const binary = this.transferConfig.binary === true
     const directory = this.transferConfig.directory === true
     const overwrite = this.transferConfig.overwrite === true

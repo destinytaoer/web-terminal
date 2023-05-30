@@ -2,6 +2,7 @@ import { Detection, TrzszOptions } from 'trzsz'
 import { TrzszFilter } from 'trzsz'
 import { Terminal, IDisposable, ITerminalAddon } from 'xterm'
 import { addSocketListener } from './utils'
+import { TextProgressBar } from 'trzsz/lib/progress.ts'
 
 export type MessageType = 'data' | 'binary' | 'resize' | 'heartbeat'
 
@@ -137,7 +138,7 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
 
     if (mode === 'S') {
       // 下载文件
-      await this.trzsz.handleTrzszDownloadFiles(version, remoteIsWindows)
+      await this.handleDownloadFiles(detection)
     } else if (mode === 'R') {
       // 上传文件
       await this.trzsz.handleTrzszUploadFiles(version, false, remoteIsWindows)
@@ -149,6 +150,35 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
       // 上传目录
       // await this.trzsz.handleTrzszUploadFiles(version, true, remoteIsWindows)
     }
+  }
+
+  private async handleDownloadFiles(detection: Detection) {
+    const { version, remoteIsWindows } = detection
+    const transfer = await this.trzsz.acceptTransfer(remoteIsWindows)
+    const config = await transfer.recvConfig()
+
+    console.log('download config', config)
+    if (config.directory) {
+      // TODO: 暂不支持下载目录提示
+      this.trzsz.throwError('暂不支持下载目录')
+    }
+    const num = await transfer.recvFileNum()
+
+    if (num > 1) {
+      // TODO: 暂不支持下载多个文件提示
+      this.trzsz.throwError('暂不支持下载多个文件')
+    }
+
+    if (config.quiet !== true) {
+      // 初始化 progress
+      this.trzsz?.initProgressBar(config.tmux_pane_width, num)
+    }
+
+    // 接收文件
+    const filename = ''
+
+    // 发送退出
+    await transfer.clientExit(`Saved ${filename}`)
   }
 
   private attachSocket(socket: WebSocket) {

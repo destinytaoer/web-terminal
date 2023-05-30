@@ -62,7 +62,8 @@ export interface Detection {
 export interface TrzszConfig {
   binary?: boolean
   directory?: boolean
-  bufsize: number
+  quiet?: boolean
+  bufsize?: number
   timeout?: number
   overwrite?: boolean
   escape_chars?: boolean
