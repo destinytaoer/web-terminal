@@ -49,7 +49,6 @@ export class ZmodemAddon implements ITerminalAddon {
       if (this.options.enableTrzsz) {
         this.trzszFilter.processServerOutput(data)
       } else {
-        console.log('sentry consume data', data)
         this.sentry?.consume(data)
       }
     } catch (e) {
@@ -92,7 +91,7 @@ export class ZmodemAddon implements ITerminalAddon {
       sendToServer: (data) => sender(data),
       terminalColumns: terminal.cols,
       isWindowsShell: false,
-      chooseSendFiles() {},
+      // chooseSendFiles() {},
     })
     // TODO: 拖拽上传下载
     // const element = terminal.element as EventTarget;
@@ -186,7 +185,7 @@ export class ZmodemAddon implements ITerminalAddon {
       let count = 0
       // 使用 send_block_files 分片上传才有进度条, 并且解决了大文件上传报错的问题
       // https://github.com/FGasper/zmodemjs/issues/11
-      Zmodem.Browser.send_block_files(session as ZmodemSendSession, files, {
+      Zmodem.Browser.send_files(session, files, {
         on_progress: (_, offer) => {
           if (count === 0) {
             this.terminal?.write('\r\n')

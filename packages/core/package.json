@@ -7,7 +7,7 @@
     "buffer": "^6.0.3",
     "file-saver": "^2.0.5",
     "lodash": "^4.17.21",
-    "trzsz": "^1.1.0",
+    "trzsz": "workspace:*",
     "xterm": "^5.1.0",
     "xterm-addon-canvas": "^0.3.0",
     "xterm-addon-fit": "^0.7.0",
