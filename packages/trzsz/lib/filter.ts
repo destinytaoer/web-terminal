@@ -62,7 +62,7 @@ export class TrzszFilter {
   private sendToServer: (input: string | Uint8Array) => void
   private chooseSendFiles?: (directory?: boolean) => Promise<string[] | undefined>
   private chooseSaveDirectory?: () => Promise<string | undefined>
-  private onDetect?: (detection: Detection) => Promise<string | undefined>
+  private onDetect?: (detection: Detection) => Promise<void>
   private terminalColumns: number
   private isWindowsShell: boolean
   public trzszTransfer: TrzszTransfer | null = null
@@ -398,10 +398,11 @@ export class TrzszFilter {
   }
 
   // 初始化进度条
-  public initProgressBar(tmux_pane_width?: number, fileCount?: number) {
+  public initProgressBar(tmux_pane_width?: number) {
     this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns, tmux_pane_width)
-    if (fileCount) {
-      this.textProgressBar.onNum(fileCount)
-    }
+  }
+
+  public updateProgressBar(method: 'onNum' | 'onName' | 'onSize' | 'onStep', ...args: any[]) {
+    this.textProgressBar?.[method]?.(...args)
   }
 }

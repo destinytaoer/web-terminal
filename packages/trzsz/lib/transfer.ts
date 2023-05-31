@@ -427,6 +427,12 @@ export class TrzszTransfer {
     return num
   }
 
+  public async recvFileNumPure() {
+    const num = await this.recvInteger('NUM')
+    await this.sendInteger('SUCC', num)
+    return num
+  }
+
   public async recvFileName(saveParam: any, openSaveFile: OpenSaveFile, directory: boolean, overwrite: boolean, progressCallback: ProgressCallback) {
     const fileName = await this.recvString('NAME')
     const file = await openSaveFile(saveParam, fileName, directory, overwrite)
@@ -437,12 +443,24 @@ export class TrzszTransfer {
     return file
   }
 
+  public async recvFileNamePure() {
+    const fileName = await this.recvString('NAME')
+    await this.sendString('SUCC', fileName)
+    return fileName
+  }
+
   public async recvFileSize(progressCallback: ProgressCallback) {
     const fileSize = await this.recvInteger('SIZE')
     await this.sendInteger('SUCC', fileSize)
     if (progressCallback) {
       progressCallback.onSize(fileSize)
     }
+    return fileSize
+  }
+
+  public async recvFileSizePure() {
+    const fileSize = await this.recvInteger('SIZE')
+    await this.sendInteger('SUCC', fileSize)
     return fileSize
   }
 

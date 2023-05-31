@@ -49,7 +49,7 @@ export interface TrzszOptions {
    */
   isWindowsShell?: boolean
 
-  onDetect?: (detection: Detection) => Promise<undefined>
+  onDetect?: (detection: Detection) => Promise<void>
 }
 
 export interface Detection {

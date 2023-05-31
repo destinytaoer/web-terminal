@@ -31,6 +31,8 @@ export interface TrzszAddonOptions extends Pick<TrzszOptions, 'chooseSendFiles' 
   processMessageFromServer?: ProcessMessageFromServerFn
 }
 
+const MAX_DOWNLOAD_FILE_SIZE = 200 * 1024 * 1024
+
 /**
  * An addon for xterm.js that supports trzsz
  */
@@ -155,23 +157,35 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
   private async handleDownloadFiles(detection: Detection) {
     const { version, remoteIsWindows } = detection
     const transfer = await this.trzsz.acceptTransfer(remoteIsWindows)
-    const config = await transfer.recvConfig()
 
-    console.log('download config', config)
+    // 接收文件配置
+    const config = await transfer.recvConfig()
     if (config.directory) {
       // TODO: 暂不支持下载目录提示
       this.trzsz.throwError('暂不支持下载目录')
     }
-    const num = await transfer.recvFileNum()
 
+    // 接收文件数量
+    const num = await transfer.recvFileNumPure()
     if (num > 1) {
       // TODO: 暂不支持下载多个文件提示
-      this.trzsz.throwError('暂不支持下载多个文件')
+      this.trzsz?.throwError('暂不支持下载多个文件')
     }
 
     if (config.quiet !== true) {
       // 初始化 progress
-      this.trzsz?.initProgressBar(config.tmux_pane_width, num)
+      this.trzsz?.initProgressBar(config.tmux_pane_width)
+      this.trzsz?.updateProgressBar('onNum', num)
+    }
+
+    // 接收文件名和文件大小
+    const filename = await transfer.recvFileNamePure()
+    this.trzsz?.updateProgressBar('onName', filename)
+    const fileSize = await transfer.recvFileSizePure()
+    this.trzsz?.updateProgressBar('onSize', fileSize)
+
+    if (fileSize > MAX_DOWNLOAD_FILE_SIZE) {
+      this.trzsz?.throwError('暂不支持下载大于 200M 的文件')
     }
 
     // 接收文件
