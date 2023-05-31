@@ -495,6 +495,37 @@ export class TrzszTransfer {
     return new Uint8Array((md5.end(true) as Int32Array).buffer)
   }
 
+  public async recvFileDataPure(size: number, onStep: (step: number) => void) {
+    const binary = this.transferConfig.binary === true
+    // const directory = this.transferConfig.directory === true
+    // const overwrite = this.transferConfig.overwrite === true
+    const timeoutInMilliseconds = this.transferConfig.timeout ? this.transferConfig.timeout * 1000 : 100000
+    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : []
+
+    let step = 0
+    onStep(step)
+    const md5 = new Md5()
+    const buf = new Uint8Array(size)
+    while (step < size) {
+      const beginTime = Date.now()
+      const data = await this.recvData(binary, escapeCodes, timeoutInMilliseconds)
+      buf.set(data, step)
+      step += data.length
+      onStep(step)
+      await this.sendInteger('SUCC', data.length)
+      md5.appendByteArray(data)
+      const chunkTime = Date.now() - beginTime
+      if (chunkTime > this.maxChunkTimeInMilliseconds) {
+        this.maxChunkTimeInMilliseconds = chunkTime
+      }
+    }
+    const md5Buf = new Uint8Array((md5.end(true) as Int32Array).buffer)
+    return {
+      buffer: buf,
+      md5: md5Buf,
+    }
+  }
+
   private async recvFileMD5(digest: Uint8Array, progressCallback: ProgressCallback) {
     const expectDigest = await this.recvBinary('MD5')
     if (digest.length != expectDigest.length) {
@@ -509,6 +540,19 @@ export class TrzszTransfer {
     if (progressCallback) {
       progressCallback.onDone()
     }
+  }
+
+  public async recvFileMD5Pure(digest: Uint8Array) {
+    const expectDigest = await this.recvBinary('MD5')
+    if (digest.length != expectDigest.length) {
+      throw new TrzszError('Check MD5 failed')
+    }
+    for (let j = 0; j < digest.length; j++) {
+      if (digest[j] != expectDigest[j]) {
+        throw new TrzszError('Check MD5 failed')
+      }
+    }
+    await this.sendBinary('SUCC', digest)
   }
 
   public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback?: ProgressCallback) {

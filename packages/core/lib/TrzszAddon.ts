@@ -2,7 +2,6 @@ import { Detection, TrzszOptions } from 'trzsz'
 import { TrzszFilter } from 'trzsz'
 import { Terminal, IDisposable, ITerminalAddon } from 'xterm'
 import { addSocketListener } from './utils'
-import { TextProgressBar } from 'trzsz/lib/progress.ts'
 
 export type MessageType = 'data' | 'binary' | 'resize' | 'heartbeat'
 
@@ -189,10 +188,35 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
     }
 
     // 接收文件
-    const filename = ''
+    const { buffer, md5 } = await transfer.recvFileDataPure(fileSize, (step) => this.trzsz?.updateProgressBar('onStep', step))
+
+    // 验证 md5
+    await transfer.recvFileMD5Pure(md5)
 
     // 发送退出
     await transfer.clientExit(`Saved ${filename}`)
+
+    // 保存文件
+    this.save_to_disk(buffer, filename)
+  }
+
+  save_to_disk(buf: Uint8Array, name: string) {
+    var blob = new Blob([buf.buffer])
+    var url = URL.createObjectURL(blob)
+
+    var el = document.createElement('a')
+    el.style.display = 'none'
+    el.href = url
+    el.download = name
+    document.body.appendChild(el)
+
+    //It seems like a security problem that this actually works;
+    //I’d think there would need to be some confirmation before
+    //a browser could save arbitrarily many bytes onto the disk.
+    //But, hey.
+    el.click()
+
+    document.body.removeChild(el)
   }
 
   private attachSocket(socket: WebSocket) {
