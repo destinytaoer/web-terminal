@@ -402,7 +402,7 @@ export class TrzszFilter {
     this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns, tmux_pane_width)
   }
 
-  public updateProgressBar(method: 'onNum' | 'onName' | 'onSize' | 'onStep', ...args: any[]) {
+  public updateProgressBar(method: 'onNum' | 'onName' | 'onSize' | 'onStep' | 'onDone', ...args: any[]) {
     this.textProgressBar?.[method]?.(...args)
   }
 }

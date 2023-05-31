@@ -2,19 +2,20 @@ import { Md5 } from 'ts-md5'
 import { TrzszBuffer } from './buffer'
 import { escapeCharsToCodes, escapeData, unescapeData } from './escape'
 import {
-  trzszVersion,
-  uint8ToStr,
-  encodeBuffer,
   decodeBuffer,
+  encodeBuffer,
+  OpenSaveFile,
+  ProgressCallback,
   TmuxMode,
   TrzszError,
   TrzszFile,
-  OpenSaveFile,
   TrzszFileReader,
   TrzszFileWriter,
-  ProgressCallback,
+  trzszVersion,
+  uint8ToStr,
 } from './comm'
 import type { TrzszConfig } from './options'
+import { readFile } from './browser.ts'
 
 /* eslint-disable require-jsdoc */
 
@@ -308,6 +309,11 @@ export class TrzszTransfer {
     }
   }
 
+  public async sendFileNumPure(num: number) {
+    await this.sendInteger('NUM', num)
+    await this.checkInteger(num)
+  }
+
   private async sendFileName(file: TrzszFileReader, directory: boolean, progressCallback: ProgressCallback) {
     const relPath = file.getRelPath()
     const fileName = relPath[relPath.length - 1]
@@ -328,12 +334,23 @@ export class TrzszTransfer {
     return remoteName
   }
 
+  public async sendFileNamePure(filename: string) {
+    await this.sendString('NAME', filename)
+
+    return await this.recvString('SUCC')
+  }
+
   private async sendFileSize(size: number, progressCallback: ProgressCallback) {
     await this.sendInteger('SIZE', size)
     await this.checkInteger(size)
     if (progressCallback) {
       progressCallback.onSize(size)
     }
+  }
+
+  public async sendFileSizePure(size: number) {
+    await this.sendInteger('SIZE', size)
+    await this.checkInteger(size)
   }
 
   private async sendFileData(
@@ -376,12 +393,54 @@ export class TrzszTransfer {
     return new Uint8Array((md5.end(true) as Int32Array).buffer)
   }
 
+  public async sendFileDataPure(file: File, onStep: (step: number) => void, defaultMaxBufSize: number) {
+    const binary = this.transferConfig.binary === true
+    const maxBufSize = Math.min(this.transferConfig.bufsize || defaultMaxBufSize, defaultMaxBufSize)
+    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : []
+
+    const size = file.size
+    let step = 0
+    onStep(step)
+    let bufSize = 1024
+    let buffer = new ArrayBuffer(bufSize)
+    const md5 = new Md5()
+    const fileBuffer = await readFile(file, 'ArrayBuffer')
+    while (step < size) {
+      const beginTime = Date.now()
+      const chunk = new Uint8Array(fileBuffer.slice(step, step + bufSize))
+      await this.sendData(chunk, binary, escapeCodes)
+      md5.appendByteArray(chunk)
+      await this.checkInteger(chunk.length)
+      console.log('chunk size', chunk.length)
+      step += chunk.length
+      onStep(step)
+
+      const chunkTime = Date.now() - beginTime
+      if (chunk.length == bufSize && chunkTime < 500 && bufSize < maxBufSize) {
+        bufSize = Math.min(bufSize * 2, maxBufSize)
+        buffer = new ArrayBuffer(bufSize)
+      } else if (chunkTime >= 2000 && bufSize > 1024) {
+        bufSize = 1024
+        buffer = new ArrayBuffer(bufSize)
+      }
+      if (chunkTime > this.maxChunkTimeInMilliseconds) {
+        this.maxChunkTimeInMilliseconds = chunkTime
+      }
+    }
+    return new Uint8Array((md5.end(true) as Int32Array).buffer)
+  }
+
   private async sendFileMD5(digest: Uint8Array, progressCallback: ProgressCallback) {
     await this.sendBinary('MD5', digest)
     await this.checkBinary(digest)
     if (progressCallback) {
       progressCallback.onDone()
     }
+  }
+
+  public async sendFileMD5Pure(digest: Uint8Array) {
+    await this.sendBinary('MD5', digest)
+    await this.checkBinary(digest)
   }
 
   public async sendFiles(files: TrzszFileReader[], progressCallback: ProgressCallback) {

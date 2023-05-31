@@ -32,6 +32,7 @@ export interface TrzszAddonOptions extends Pick<TrzszOptions, 'chooseSendFiles' 
 
 const MAX_DOWNLOAD_FILE_SIZE = 200 * 1024 * 1024
 const MAX_UPLOAD_FILE_SIZE = 200 * 1024 * 1024
+const MAX_UPLOAD_BUFFER_SIZE = 45 * 1024
 
 /**
  * An addon for xterm.js that supports trzsz
@@ -168,17 +169,47 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
 
     // 文件大小限制
     const fileSize = file.size
+    const num = files.length
+    const filename = file.name
     if (fileSize > MAX_UPLOAD_FILE_SIZE) {
       // TODO: 提示用户超过预定文件大小了
       // message.warn('限制上传 200MB 以内的文件')
       this.trzsz.throwError('暂不支持上传大于 200M 的文件')
     }
 
+    const transfer = await this.trzsz.acceptTransfer(remoteIsWindows)
+
+    // 接收文件配置
+    const config = await transfer.recvConfig()
+
+    if (config.bufsize && config.bufsize > MAX_UPLOAD_BUFFER_SIZE) {
+      console.warn('trz bufSize 配置大于 45k, 现进行限流 45k')
+    }
+
+    if (config.quiet !== true) {
+      // 初始化 progress
+      this.trzsz?.initProgressBar(config.tmux_pane_width)
+      this.trzsz?.updateProgressBar('onNum', num)
+      this.trzsz?.updateProgressBar('onName', filename)
+      this.trzsz?.updateProgressBar('onSize', fileSize)
+    }
+
+    // 发送文件数量
+    await transfer.sendFileNumPure(num)
+    // 发送文件名称
+    const remoteFilename = await transfer.sendFileNamePure(filename)
+    // 发送文件大小
+    await transfer.sendFileSizePure(fileSize)
+
     // 上传文件
+    const md5 = await transfer.sendFileDataPure(file, (step) => this.trzsz?.updateProgressBar('onStep', step), MAX_UPLOAD_BUFFER_SIZE)
 
     // 验证 md5
+    await transfer.sendFileMD5Pure(md5)
+    this.trzsz?.updateProgressBar('onDone')
 
     // 发送退出
+    await transfer.clientExit(`Received ${remoteFilename}`)
   }
 
   selectFile(multiple = false): Promise<FileList | null> {
@@ -218,17 +249,17 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
       this.trzsz?.throwError('暂不支持下载多个文件')
     }
 
+    // 接收文件名和文件大小
+    const filename = await transfer.recvFileNamePure()
+    const fileSize = await transfer.recvFileSizePure()
+
     if (config.quiet !== true) {
       // 初始化 progress
       this.trzsz?.initProgressBar(config.tmux_pane_width)
       this.trzsz?.updateProgressBar('onNum', num)
+      this.trzsz?.updateProgressBar('onName', filename)
+      this.trzsz?.updateProgressBar('onSize', fileSize)
     }
-
-    // 接收文件名和文件大小
-    const filename = await transfer.recvFileNamePure()
-    this.trzsz?.updateProgressBar('onName', filename)
-    const fileSize = await transfer.recvFileSizePure()
-    this.trzsz?.updateProgressBar('onSize', fileSize)
 
     if (fileSize > MAX_DOWNLOAD_FILE_SIZE) {
       this.trzsz?.throwError('暂不支持下载大于 200M 的文件')
@@ -239,6 +270,7 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
 
     // 验证 md5
     await transfer.recvFileMD5Pure(md5)
+    this.trzsz?.updateProgressBar('onDone')
 
     // 发送退出
     await transfer.clientExit(`Saved ${filename}`)
