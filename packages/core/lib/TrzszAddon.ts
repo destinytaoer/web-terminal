@@ -31,6 +31,7 @@ export interface TrzszAddonOptions extends Pick<TrzszOptions, 'chooseSendFiles' 
 }
 
 const MAX_DOWNLOAD_FILE_SIZE = 200 * 1024 * 1024
+const MAX_UPLOAD_FILE_SIZE = 200 * 1024 * 1024
 
 /**
  * An addon for xterm.js that supports trzsz
@@ -135,22 +136,68 @@ export class TrzszAddon extends WebSocket implements ITerminalAddon {
   }
 
   private onDetect = async (detection: Detection) => {
-    const { mode, version, remoteIsWindows } = detection
+    const { mode } = detection
 
     if (mode === 'S') {
       // 下载文件
       await this.handleDownloadFiles(detection)
     } else if (mode === 'R') {
       // 上传文件
-      await this.trzsz.handleTrzszUploadFiles(version, false, remoteIsWindows)
+      await this.handleUploadFiles(detection)
     } else if (mode === 'D') {
       // TODO: 暂不支持上传目录提示
-      console.log('不能上传目录')
+      this.trzsz.throwError('暂不支持上传目录')
       // 取消上传
-      await this.trzsz.cancelTransfer(remoteIsWindows)
+      // await this.trzsz.cancelTransfer(remoteIsWindows)
       // 上传目录
       // await this.trzsz.handleTrzszUploadFiles(version, true, remoteIsWindows)
     }
+  }
+
+  private async handleUploadFiles(detection: Detection) {
+    const { mode, version, remoteIsWindows } = detection
+    const files = await this.selectFile()
+    const file = files?.item(0)
+
+    // 未选择文件
+    if (!file) {
+      console.log('cancel file upload')
+      this.trzsz.cancelTransfer(remoteIsWindows)
+      return
+    }
+
+    // 文件大小限制
+    const fileSize = file.size
+    if (fileSize > MAX_UPLOAD_FILE_SIZE) {
+      // TODO: 提示用户超过预定文件大小了
+      // message.warn('限制上传 200MB 以内的文件')
+      this.trzsz.throwError('暂不支持上传大于 200M 的文件')
+    }
+
+    // 上传文件
+
+    // 验证 md5
+
+    // 发送退出
+  }
+
+  selectFile(multiple = false): Promise<FileList | null> {
+    return new Promise((resolve, reject) => {
+      const inputDom = document.createElement('input')
+      inputDom.type = 'file'
+      inputDom.multiple = multiple
+      inputDom.addEventListener('change', (e: any) => {
+        const files = e.target?.files
+        console.log('files', files)
+        resolve(files)
+      })
+
+      inputDom.addEventListener('cancel', () => {
+        resolve(null)
+      })
+
+      inputDom.click()
+    })
   }
 
   private async handleDownloadFiles(detection: Detection) {
