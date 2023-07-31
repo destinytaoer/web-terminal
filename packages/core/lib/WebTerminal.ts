@@ -153,6 +153,40 @@ export class WebTerminal extends Disposable {
     this.xterm?.focus()
   }
 
+  // 阻止粘贴
+  preventPaste(cb?: () => void) {
+    if (this.xterm?.textarea) {
+      this.register(
+        addDisposableDomListener(
+          this.xterm?.textarea,
+          'paste',
+          (e) => {
+            e.preventDefault()
+            // 必须阻止冒泡, 防止被 xterm 本身的事件处理器监听到
+            e.stopPropagation()
+            cb?.()
+          },
+          // 需要在捕获阶段拦截
+          true,
+        ),
+      )
+    }
+  }
+
+  // 禁用输入
+  disableStdIn() {
+    if (this.xterm) {
+      this.xterm.options.disableStdin = true
+    }
+  }
+
+  // 启用输入
+  enableStdIn() {
+    if (this.xterm) {
+      this.xterm.options.disableStdin = false
+    }
+  }
+
   cancelUploadFile() {
     this.zmodemAddon?.closeSession()
   }
