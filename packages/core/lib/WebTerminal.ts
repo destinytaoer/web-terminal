@@ -131,6 +131,7 @@ export class WebTerminal extends Disposable {
     }
     this.dispose()
     this.xterm?.dispose()
+    this.xterm?.clear()
   }
 
   fit = () => {
