@@ -275,3 +275,25 @@ export async function openSaveFile(saveParam: any, fileName: string, directory: 
   const writer = await doCreateFile(dirHandle, fullPath)
   return new BrowserFileWriter(fileName, localName, writer)
 }
+
+export function readFile(blob: File, type: 'ArrayBuffer' | 'DataURL' | 'Text' = 'ArrayBuffer') {
+  return new Promise<ArrayBuffer>((resolve) => {
+    const reader = new FileReader()
+
+    switch (type) {
+      case 'ArrayBuffer':
+        reader.readAsArrayBuffer(blob)
+        break
+      case 'DataURL': // base64 字符串
+        reader.readAsDataURL(blob)
+        break
+      case 'Text':
+        reader.readAsText(blob, 'utf-8')
+        break
+    }
+
+    reader.onload = (e) => {
+      resolve(e.target.result)
+    }
+  })
+}

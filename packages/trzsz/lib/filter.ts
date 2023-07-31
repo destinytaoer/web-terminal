@@ -1,6 +1,6 @@
 import * as browser from './browser'
 import { TrzszError } from './comm'
-import { TrzszOptions } from './options'
+import { Detection, TrzszConfig, TrzszOptions } from './options'
 import { TrzszTransfer } from './transfer'
 import { TextProgressBar } from './progress'
 import { parseDataTransferItemList } from './drag'
@@ -62,10 +62,11 @@ export class TrzszFilter {
   private sendToServer: (input: string | Uint8Array) => void
   private chooseSendFiles?: (directory?: boolean) => Promise<string[] | undefined>
   private chooseSaveDirectory?: () => Promise<string | undefined>
+  private onDetect?: (detection: Detection) => Promise<void>
   private terminalColumns: number
   private isWindowsShell: boolean
-  private trzszTransfer: TrzszTransfer | null = null
-  private textProgressBar: TextProgressBar | null = null
+  public trzszTransfer: TrzszTransfer | null = null
+  public textProgressBar: TextProgressBar | null = null
   private uniqueIdMaps: Map<string, number> = new Map<string, number>()
   private uploadFilesList: TrzszFileReader[] | null = null
   private uploadFilesResolve: Function | null = null
@@ -94,6 +95,7 @@ export class TrzszFilter {
 
     this.chooseSendFiles = options.chooseSendFiles
     this.chooseSaveDirectory = options.chooseSaveDirectory
+    this.onDetect = options.onDetect
     this.terminalColumns = options.terminalColumns || 80
     this.isWindowsShell = !!options.isWindowsShell
   }
@@ -131,10 +133,14 @@ export class TrzszFilter {
   public processTerminalInput(input: string): void {
     if (this.isTransferringFiles()) {
       if (input === '\x03') {
+        console.log('transferring: terminal input ctrl + c to stop frontend')
         // `ctrl + c` to stop transferring files
         this.stopTransferringFiles()
       }
       return // ignore input while transferring files
+    }
+    if (input === '\x03') {
+      console.log('terminal input ctrl + c to stop backend')
     }
     this.sendToServer(input)
   }
@@ -280,17 +286,27 @@ export class TrzszFilter {
       remoteIsWindows = true
     }
 
-    console.log('mode', mode)
+    const detection = {
+      mode,
+      version,
+      uniqueId,
+      remoteIsWindows,
+    } as Detection
 
     try {
       this.trzszTransfer = new TrzszTransfer(this.sendToServer, this.isWindowsShell)
-      if (mode === 'S') {
-        await this.handleTrzszDownloadFiles(version, remoteIsWindows)
-      } else if (mode === 'R') {
-        await this.handleTrzszUploadFiles(version, false, remoteIsWindows)
-      } else if (mode === 'D') {
-        await this.handleTrzszUploadFiles(version, true, remoteIsWindows)
+      if (this.onDetect) {
+        await this.onDetect(detection)
+      } else {
+        if (mode === 'S') {
+          await this.handleTrzszDownloadFiles(version, remoteIsWindows)
+        } else if (mode === 'R') {
+          await this.handleTrzszUploadFiles(version, false, remoteIsWindows)
+        } else if (mode === 'D') {
+          await this.handleTrzszUploadFiles(version, true, remoteIsWindows)
+        }
       }
+
       if (this.uploadFilesResolve) {
         this.uploadFilesResolve()
       }
@@ -361,5 +377,32 @@ export class TrzszFilter {
     const remoteNames = await this.trzszTransfer.sendFiles(sendFiles, this.textProgressBar)
 
     await this.trzszTransfer.clientExit(`Received ${remoteNames.join(', ')}`)
+  }
+
+  // 拒绝文件
+  public async cancelTransfer(remoteIsWindows: boolean) {
+    await this.trzszTransfer.sendAction(false, remoteIsWindows)
+  }
+
+  // 接受文件
+  public async acceptTransfer(remoteIsWindows: boolean) {
+    await this.trzszTransfer.sendAction(true, remoteIsWindows)
+    return this.trzszTransfer
+  }
+
+  // 抛出错误来实现中断
+  // message 自定义中断消息
+  // type 不能是 fail/FAIL/EXIT
+  public throwError(message: string, type?: string) {
+    throw new TrzszError(message, type)
+  }
+
+  // 初始化进度条
+  public initProgressBar(tmux_pane_width?: number) {
+    this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns, tmux_pane_width)
+  }
+
+  public updateProgressBar(method: 'onNum' | 'onName' | 'onSize' | 'onStep' | 'onDone', ...args: any[]) {
+    this.textProgressBar?.[method]?.(...args)
   }
 }

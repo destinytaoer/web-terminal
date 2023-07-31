@@ -118,6 +118,7 @@ export class TrzszBuffer {
       }
       if (next.includes(0x03)) {
         // `ctrl + c` to interrupt
+        console.log('readline ctrl + c to Interrupted')
         throw new TrzszError('Interrupted')
       }
       buf = this.appendBuffer(buf, len, next)

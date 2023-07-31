@@ -48,4 +48,25 @@ export interface TrzszOptions {
    * Is there a windows shell? Such as `cmd` and `PowerShell`.
    */
   isWindowsShell?: boolean
+
+  onDetect?: (detection: Detection) => Promise<void>
+}
+
+export interface Detection {
+  mode: 'S' | 'R' | 'D'
+  version: string
+  uniqueId: string
+  remoteIsWindows: boolean
+}
+
+export interface TrzszConfig {
+  binary?: boolean
+  directory?: boolean
+  quiet?: boolean
+  bufsize?: number
+  timeout?: number
+  overwrite?: boolean
+  escape_chars?: boolean
+  tmux_output_junk?: boolean
+  tmux_pane_width?: number
 }

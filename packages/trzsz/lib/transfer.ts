@@ -2,18 +2,20 @@ import { Md5 } from 'ts-md5'
 import { TrzszBuffer } from './buffer'
 import { escapeCharsToCodes, escapeData, unescapeData } from './escape'
 import {
-  trzszVersion,
-  uint8ToStr,
-  encodeBuffer,
   decodeBuffer,
+  encodeBuffer,
+  OpenSaveFile,
+  ProgressCallback,
   TmuxMode,
   TrzszError,
   TrzszFile,
-  OpenSaveFile,
   TrzszFileReader,
   TrzszFileWriter,
-  ProgressCallback,
+  trzszVersion,
+  uint8ToStr,
 } from './comm'
+import type { TrzszConfig } from './options'
+import { readFile } from './browser.ts'
 
 /* eslint-disable require-jsdoc */
 
@@ -26,7 +28,7 @@ export class TrzszTransfer {
   private openedFiles: TrzszFile[] = []
   private tmuxOutputJunk: boolean = false
   private cleanTimeoutInMilliseconds: number = 100
-  private transferConfig: any = {}
+  private transferConfig: TrzszConfig = {}
   private stopped: boolean = false
   private maxChunkTimeInMilliseconds: number = 0
   private protocolNewline: string = '\n'
@@ -307,6 +309,11 @@ export class TrzszTransfer {
     }
   }
 
+  public async sendFileNumPure(num: number) {
+    await this.sendInteger('NUM', num)
+    await this.checkInteger(num)
+  }
+
   private async sendFileName(file: TrzszFileReader, directory: boolean, progressCallback: ProgressCallback) {
     const relPath = file.getRelPath()
     const fileName = relPath[relPath.length - 1]
@@ -327,12 +334,23 @@ export class TrzszTransfer {
     return remoteName
   }
 
+  public async sendFileNamePure(filename: string) {
+    await this.sendString('NAME', filename)
+
+    return await this.recvString('SUCC')
+  }
+
   private async sendFileSize(size: number, progressCallback: ProgressCallback) {
     await this.sendInteger('SIZE', size)
     await this.checkInteger(size)
     if (progressCallback) {
       progressCallback.onSize(size)
     }
+  }
+
+  public async sendFileSizePure(size: number) {
+    await this.sendInteger('SIZE', size)
+    await this.checkInteger(size)
   }
 
   private async sendFileData(
@@ -375,12 +393,54 @@ export class TrzszTransfer {
     return new Uint8Array((md5.end(true) as Int32Array).buffer)
   }
 
+  public async sendFileDataPure(file: File, onStep: (step: number) => void, defaultMaxBufSize: number) {
+    const binary = this.transferConfig.binary === true
+    const maxBufSize = Math.min(this.transferConfig.bufsize || defaultMaxBufSize, defaultMaxBufSize)
+    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : []
+
+    const size = file.size
+    let step = 0
+    onStep(step)
+    let bufSize = 1024
+    let buffer = new ArrayBuffer(bufSize)
+    const md5 = new Md5()
+    const fileBuffer = await readFile(file, 'ArrayBuffer')
+    while (step < size) {
+      const beginTime = Date.now()
+      const chunk = new Uint8Array(fileBuffer.slice(step, step + bufSize))
+      await this.sendData(chunk, binary, escapeCodes)
+      md5.appendByteArray(chunk)
+      await this.checkInteger(chunk.length)
+      console.log('chunk size', chunk.length)
+      step += chunk.length
+      onStep(step)
+
+      const chunkTime = Date.now() - beginTime
+      if (chunk.length == bufSize && chunkTime < 500 && bufSize < maxBufSize) {
+        bufSize = Math.min(bufSize * 2, maxBufSize)
+        buffer = new ArrayBuffer(bufSize)
+      } else if (chunkTime >= 2000 && bufSize > 1024) {
+        bufSize = 1024
+        buffer = new ArrayBuffer(bufSize)
+      }
+      if (chunkTime > this.maxChunkTimeInMilliseconds) {
+        this.maxChunkTimeInMilliseconds = chunkTime
+      }
+    }
+    return new Uint8Array((md5.end(true) as Int32Array).buffer)
+  }
+
   private async sendFileMD5(digest: Uint8Array, progressCallback: ProgressCallback) {
     await this.sendBinary('MD5', digest)
     await this.checkBinary(digest)
     if (progressCallback) {
       progressCallback.onDone()
     }
+  }
+
+  public async sendFileMD5Pure(digest: Uint8Array) {
+    await this.sendBinary('MD5', digest)
+    await this.checkBinary(digest)
   }
 
   public async sendFiles(files: TrzszFileReader[], progressCallback: ProgressCallback) {
@@ -417,7 +477,7 @@ export class TrzszTransfer {
     return remoteNames
   }
 
-  private async recvFileNum(progressCallback: ProgressCallback) {
+  public async recvFileNum(progressCallback?: ProgressCallback) {
     const num = await this.recvInteger('NUM')
     await this.sendInteger('SUCC', num)
     if (progressCallback) {
@@ -426,7 +486,13 @@ export class TrzszTransfer {
     return num
   }
 
-  private async recvFileName(saveParam: any, openSaveFile: OpenSaveFile, directory: boolean, overwrite: boolean, progressCallback: ProgressCallback) {
+  public async recvFileNumPure() {
+    const num = await this.recvInteger('NUM')
+    await this.sendInteger('SUCC', num)
+    return num
+  }
+
+  public async recvFileName(saveParam: any, openSaveFile: OpenSaveFile, directory: boolean, overwrite: boolean, progressCallback: ProgressCallback) {
     const fileName = await this.recvString('NAME')
     const file = await openSaveFile(saveParam, fileName, directory, overwrite)
     await this.sendString('SUCC', file.getLocalName())
@@ -436,7 +502,13 @@ export class TrzszTransfer {
     return file
   }
 
-  private async recvFileSize(progressCallback: ProgressCallback) {
+  public async recvFileNamePure() {
+    const fileName = await this.recvString('NAME')
+    await this.sendString('SUCC', fileName)
+    return fileName
+  }
+
+  public async recvFileSize(progressCallback: ProgressCallback) {
     const fileSize = await this.recvInteger('SIZE')
     await this.sendInteger('SUCC', fileSize)
     if (progressCallback) {
@@ -445,7 +517,13 @@ export class TrzszTransfer {
     return fileSize
   }
 
-  private async recvFileData(
+  public async recvFileSizePure() {
+    const fileSize = await this.recvInteger('SIZE')
+    await this.sendInteger('SUCC', fileSize)
+    return fileSize
+  }
+
+  public async recvFileData(
     file: TrzszFileWriter,
     size: number,
     binary: boolean,
@@ -476,6 +554,37 @@ export class TrzszTransfer {
     return new Uint8Array((md5.end(true) as Int32Array).buffer)
   }
 
+  public async recvFileDataPure(size: number, onStep: (step: number) => void) {
+    const binary = this.transferConfig.binary === true
+    // const directory = this.transferConfig.directory === true
+    // const overwrite = this.transferConfig.overwrite === true
+    const timeoutInMilliseconds = this.transferConfig.timeout ? this.transferConfig.timeout * 1000 : 100000
+    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : []
+
+    let step = 0
+    onStep(step)
+    const md5 = new Md5()
+    const buf = new Uint8Array(size)
+    while (step < size) {
+      const beginTime = Date.now()
+      const data = await this.recvData(binary, escapeCodes, timeoutInMilliseconds)
+      buf.set(data, step)
+      step += data.length
+      onStep(step)
+      await this.sendInteger('SUCC', data.length)
+      md5.appendByteArray(data)
+      const chunkTime = Date.now() - beginTime
+      if (chunkTime > this.maxChunkTimeInMilliseconds) {
+        this.maxChunkTimeInMilliseconds = chunkTime
+      }
+    }
+    const md5Buf = new Uint8Array((md5.end(true) as Int32Array).buffer)
+    return {
+      buffer: buf,
+      md5: md5Buf,
+    }
+  }
+
   private async recvFileMD5(digest: Uint8Array, progressCallback: ProgressCallback) {
     const expectDigest = await this.recvBinary('MD5')
     if (digest.length != expectDigest.length) {
@@ -492,7 +601,20 @@ export class TrzszTransfer {
     }
   }
 
-  public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback: ProgressCallback) {
+  public async recvFileMD5Pure(digest: Uint8Array) {
+    const expectDigest = await this.recvBinary('MD5')
+    if (digest.length != expectDigest.length) {
+      throw new TrzszError('Check MD5 failed')
+    }
+    for (let j = 0; j < digest.length; j++) {
+      if (digest[j] != expectDigest[j]) {
+        throw new TrzszError('Check MD5 failed')
+      }
+    }
+    await this.sendBinary('SUCC', digest)
+  }
+
+  public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback?: ProgressCallback) {
     const binary = this.transferConfig.binary === true
     const directory = this.transferConfig.directory === true
     const overwrite = this.transferConfig.overwrite === true
