@@ -5,7 +5,7 @@ import { FitAddon } from 'xterm-addon-fit'
 import { WebLinksAddon } from 'xterm-addon-web-links'
 import { WebglAddon } from 'xterm-addon-webgl'
 import { AttachAddon, AttachAddonOptions } from './AttachAddon'
-import { detectWebGLContext, log } from './utils'
+import { addDisposableDomListener, detectWebGLContext, log } from './utils'
 import { ZmodemAddon, ZmodeOptions } from './ZmodemAddon'
 import { TrzszAddon } from './TrzszAddon'
 import { Disposable } from './Disposable'
@@ -79,20 +79,25 @@ export class WebTerminal extends Disposable {
     })
 
     // load addon
-    this.xterm.loadAddon(this.fitAddon)
     this.xterm.loadAddon(new WebLinksAddon())
 
     // 初始化渲染器
     this.initRenderer()
     // 渲染
     this.xterm.open(element)
-    this.fit()
 
     // 实现 fit resize 能力
     // 放置到业务中自行添加
     // this.fitWindowResize()
 
     return this.xterm
+  }
+
+  // 添加 window 窗口尺寸适配
+  fitWindowResize() {
+    this.xterm?.loadAddon(this.fitAddon)
+    this.fit()
+    this.register(addDisposableDomListener(window, 'resize', this.resizeCb))
   }
 
   connectSocket(url: string, protocols?: string | string[], options?: ConnectSocketOptions) {
@@ -124,9 +129,8 @@ export class WebTerminal extends Disposable {
       this.socket.dispose()
       this.socket = undefined
     }
-    window.removeEventListener('resize', this.resizeCb)
-    this.xterm?.dispose()
     this.dispose()
+    this.xterm?.dispose()
   }
 
   fit = () => {
@@ -135,11 +139,6 @@ export class WebTerminal extends Disposable {
     } catch (e) {
       log.error('fit error', e)
     }
-  }
-
-  // 添加 window resize 事件
-  fitWindowResize() {
-    window.addEventListener('resize', this.resizeCb)
   }
 
   loadAddon(addon: ITerminalAddon) {
