@@ -25,6 +25,10 @@ $ pnpm i
 $ pnpm dev
 ```
 
+主页 http://localhost:7700
+basic: http://localhost:7700/basic
+node-pty: http://localhost:7700/node-pty
+
 ### Apps
 
 - client: web 界面

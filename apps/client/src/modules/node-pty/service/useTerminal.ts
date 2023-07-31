@@ -1,35 +1,24 @@
 import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
 import { v4 as uuid } from 'uuid'
-import { log, WebTerminal } from 'core'
+import { addSocketListener, log, WebTerminal } from 'core'
 import { processMessageToServer, processMessageFromServer, uploadFile, createHeartbeat } from './config'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
+import Logger from 'log'
 
 const url = 'ws://127.0.0.1:3001/node-pty'
+Logger.enable('*')
 export const useTerminal = () => {
   const terminalEl = useRef<HTMLDivElement>(null)
-  const params = useParams()
   const [searchParams] = useSearchParams()
 
-  console.log('search params', searchParams)
-  console.log('search params', searchParams.get('aa'))
-  console.log('search params', searchParams.get('cc'))
+  // 设置是否使用二进制
+  const useBinary = searchParams.has('binary')
+  const shell = searchParams.get('shell') ?? 'bash'
 
   const terminal = useCreation(() => {
     return new WebTerminal()
   }, [])
-
-  // terminal 初始化
-  // useEffect(() => {
-  //   if (terminalEl.current) {
-  //     log.info('init terminal')
-  //     terminal.init(terminalEl.current)
-  //     return () => {
-  //       log.info('destroy terminal')
-  //       terminal.destroy()
-  //     }
-  //   }
-  // }, [])
 
   useEffect(() => {
     if (url && terminalEl.current) {
@@ -38,14 +27,12 @@ export const useTerminal = () => {
       const xterm = terminal.init(terminalEl.current)
       terminal.fitWindowResize()
 
-      // 设置是否使用二进制
-      const useBinary = true
-
       log.info('useBinary:', useBinary)
+      log.info('shell:', shell)
 
       const cols = xterm.cols
       const rows = xterm.rows
-      const urlWithQuery = `${url}?id=${id}&cols=${cols}&rows=${rows}&shell=${params.shell ?? 'sh'}&useBinary=${useBinary}`
+      const urlWithQuery = `${url}?id=${id}&cols=${cols}&rows=${rows}&shell=${shell ?? 'sh'}&useBinary=${useBinary}`
 
       log.info('connect socket', urlWithQuery)
       const socket = terminal.connectSocket(urlWithQuery, [], {
@@ -78,21 +65,25 @@ export const useTerminal = () => {
         socket?.sendMessage('heartbeat')
       })
 
-      socket.addEventListener('open', () => {
-        log.success('socket open')
-        terminal.focus()
-        heartbeat.start()
-      })
+      terminal.register(
+        addSocketListener(socket, 'open', () => {
+          log.success('socket open')
+          terminal.focus()
+          heartbeat.start()
+        }),
+      )
+      terminal.register(
+        addSocketListener(socket, 'error', () => {
+          terminal.write('Connect Error.')
+        }),
+      )
 
-      socket.addEventListener('error', () => {
-        terminal.write('Connect Error.')
-      })
-
-      socket.addEventListener('close', () => {
-        // const { code, reason, wasClean } = e
-        terminal.write('disconnect.')
-        heartbeat.stop()
-      })
+      terminal.register(
+        addSocketListener(socket, 'close', () => {
+          terminal.write('disconnect.')
+          heartbeat.stop()
+        }),
+      )
 
       return () => {
         heartbeat.stop()
