@@ -7,7 +7,7 @@ import { WebglAddon } from 'xterm-addon-webgl'
 import { AttachAddon, AttachAddonOptions } from './AttachAddon'
 import { detectWebGLContext, log } from './utils'
 import { ZmodemAddon, ZmodeOptions } from './ZmodemAddon'
-import { TrzszAddon } from './TrzszAddon.ts'
+import { TrzszAddon } from './TrzszAddon'
 
 export interface WebTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'

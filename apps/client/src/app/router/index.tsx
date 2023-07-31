@@ -5,6 +5,7 @@ import { GlobalLayout } from '@/app/layout'
 import { Home } from '@/modules/home'
 import { NodePty } from '@/modules/node-pty'
 import { ExecBase64, ExecBinary, ExecZmodem } from '@/modules/k8s'
+import { Basic } from '@/modules/basic'
 
 export const router = createBrowserRouter([
   {
@@ -15,6 +16,10 @@ export const router = createBrowserRouter([
       {
         path: '/',
         element: <Home />,
+      },
+      {
+        path: '/basic',
+        element: <Basic />,
       },
       {
         path: '/node-pty/:shell',
