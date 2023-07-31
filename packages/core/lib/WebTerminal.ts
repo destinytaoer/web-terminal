@@ -8,6 +8,7 @@ import { AttachAddon, AttachAddonOptions } from './AttachAddon'
 import { detectWebGLContext, log } from './utils'
 import { ZmodemAddon, ZmodeOptions } from './ZmodemAddon'
 import { TrzszAddon } from './TrzszAddon'
+import { Disposable } from './Disposable'
 
 export interface WebTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'
@@ -37,7 +38,7 @@ export type ConnectSocketOptions = Omit<AttachAddonOptions, 'writer'> & Omit<Zmo
  *   ○ terminal.dispose
  *   ○ window remove resize listener
  */
-export class WebTerminal {
+export class WebTerminal extends Disposable {
   private fitAddon = new FitAddon()
 
   private webglAddon?: WebglAddon
@@ -53,6 +54,8 @@ export class WebTerminal {
   options: WebTerminalOptions
 
   constructor(options: WebTerminalOptions = {}) {
+    super()
+
     this.options = {
       rendererType: 'webgl',
       ...options,
@@ -123,6 +126,7 @@ export class WebTerminal {
     }
     window.removeEventListener('resize', this.resizeCb)
     this.xterm?.dispose()
+    this.dispose()
   }
 
   fit = () => {
