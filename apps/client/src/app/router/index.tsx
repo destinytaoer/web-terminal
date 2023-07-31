@@ -22,7 +22,7 @@ export const router = createBrowserRouter([
         element: <Basic />,
       },
       {
-        path: '/node-pty/:shell',
+        path: '/node-pty',
         element: <NodePty />,
       },
       {
