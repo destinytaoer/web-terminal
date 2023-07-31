@@ -1,11 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
 import { v4 as uuid } from 'uuid'
-import { Logger, WebTerminal } from 'core'
+import { log, WebTerminal } from 'core'
 import { processMessageToServer, processMessageFromServer, uploadFile } from './config'
 import { useParams } from 'react-router-dom'
 
-const log = new Logger('WebTerminal', 'dev')
 const url = 'ws://127.0.0.1:3001/node-pty'
 export const useTerminal = () => {
   const terminalEl = useRef<HTMLDivElement>(null)
