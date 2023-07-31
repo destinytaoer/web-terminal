@@ -1,4 +1,4 @@
-import { IDisposable } from 'xterm'
+import { IDisposable } from './Disposable'
 import Logger from 'log'
 
 export function addSocketListener<K extends keyof WebSocketEventMap>(
@@ -14,6 +14,25 @@ export function addSocketListener<K extends keyof WebSocketEventMap>(
         return
       }
       socket.removeEventListener(type, handler)
+    },
+  }
+}
+
+export function addDisposableDomListener(
+  node: Element | Window | Document,
+  type: string,
+  handler: (e: any) => void,
+  options?: boolean | AddEventListenerOptions,
+): IDisposable {
+  node.addEventListener(type, handler, options)
+  let disposed = false
+  return {
+    dispose: () => {
+      if (disposed) {
+        return
+      }
+      disposed = true
+      node.removeEventListener(type, handler, options)
     },
   }
 }
