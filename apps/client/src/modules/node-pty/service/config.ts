@@ -1,4 +1,5 @@
-import { MessageData } from 'core'
+import { log, MessageData } from 'core'
+import { WorkerTimer } from 'worker-timer'
 
 // 生成发送给服务端的消息
 export function processMessageToServer(data: MessageData) {
@@ -54,4 +55,24 @@ export function uploadFile(): Promise<FileList> {
     inputDom.click()
     // inputDom.close()
   })
+}
+
+// 创建心跳
+export function createHeartbeat(heartbeat: () => void) {
+  // 添加心跳
+  const workerTimer = new WorkerTimer()
+  let timer: number | undefined
+
+  const start = () => {
+    timer = workerTimer.setWorkerTimer('interval', heartbeat, 30 * 1000)
+  }
+
+  const stop = () => {
+    if (timer) workerTimer.clearWorkerTimer(timer)
+  }
+
+  return {
+    start,
+    stop,
+  }
 }

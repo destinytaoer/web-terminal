@@ -2,13 +2,18 @@ import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
 import { v4 as uuid } from 'uuid'
 import { log, WebTerminal } from 'core'
-import { processMessageToServer, processMessageFromServer, uploadFile } from './config'
-import { useParams } from 'react-router-dom'
+import { processMessageToServer, processMessageFromServer, uploadFile, createHeartbeat } from './config'
+import { useParams, useSearchParams } from 'react-router-dom'
 
 const url = 'ws://127.0.0.1:3001/node-pty'
 export const useTerminal = () => {
   const terminalEl = useRef<HTMLDivElement>(null)
   const params = useParams()
+  const [searchParams] = useSearchParams()
+
+  console.log('search params', searchParams)
+  console.log('search params', searchParams.get('aa'))
+  console.log('search params', searchParams.get('cc'))
 
   const terminal = useCreation(() => {
     return new WebTerminal()
@@ -68,13 +73,15 @@ export const useTerminal = () => {
       })
 
       // 添加心跳
-      let timer: number | undefined
+      const heartbeat = createHeartbeat(() => {
+        log.info('send heartbeat', new Date().toLocaleString())
+        socket?.sendMessage('heartbeat')
+      })
+
       socket.addEventListener('open', () => {
         log.success('socket open')
         terminal.focus()
-        timer = window.setInterval(function () {
-          socket?.sendMessage('heartbeat')
-        }, 30 * 1000)
+        heartbeat.start()
       })
 
       socket.addEventListener('error', () => {
@@ -84,11 +91,11 @@ export const useTerminal = () => {
       socket.addEventListener('close', () => {
         // const { code, reason, wasClean } = e
         terminal.write('disconnect.')
-        if (timer) clearInterval(timer)
+        heartbeat.stop()
       })
 
       return () => {
-        if (timer) clearInterval(timer)
+        heartbeat.stop()
         log.info('destroy terminal')
         terminal.destroy()
       }

@@ -14,6 +14,8 @@ web terminal demo, 使用 turborepo & pnpm workspace 创建的 monorepo 项目
 - [x] k8s exec in binary channel
 - [x] k8s exec with zmodem
 
+> 注意: k8s exec demo 需要自行搭建 k8s api 服务, 仅限于调试使用, 不长期维护
+
 ## Start
 
 ### Dev
