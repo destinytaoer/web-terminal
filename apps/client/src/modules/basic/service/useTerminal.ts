@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Terminal } from 'xterm'
-import { TerminalCore } from 'terminal'
+import { TerminalController, TerminalCore } from 'terminal'
 import { useCreation } from 'ahooks'
 
 export function useTerminal() {
@@ -20,12 +20,23 @@ export function useTerminal() {
       terminal.write('service connecting...')
 
       setTimeout(() => {
-        terminal.write('\x1b[1K\r')
+        // terminal.write('\x1b[1K\r')
+        // 清空当前行
+        terminal.write(TerminalController.eraseInLine('LINE'))
+        // 回到行首
+        terminal.write(TerminalController.CR)
+        // 打印
         terminal.write('connected!')
+        // 修改标题
+        terminal.write(TerminalController.changeTitle('change title'))
       }, 3000)
 
       terminal.xterm.onData((data) => {
         terminal.write(data)
+      })
+      terminal.xterm.onTitleChange((title) => {
+        console.log('title: ', title)
+        document.title = title
       })
 
       return () => {
