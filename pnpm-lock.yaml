@@ -17,7 +17,7 @@ importers:
         version: 2.8.7
       turbo:
         specifier: latest
-        version: 1.10.12
+        version: 1.12.5
 
   apps/client:
     dependencies:
@@ -51,6 +51,9 @@ importers:
       react-router-dom:
         specifier: ^6.10.0
         version: 6.10.0(react-dom@18.2.0)(react@18.2.0)
+      terminal:
+        specifier: workspace:*
+        version: link:../../packages/terminal
       uuid:
         specifier: ^9.0.0
         version: 9.0.0
@@ -190,6 +193,43 @@ importers:
         specifier: 3.0.0-canary.1
         version: 3.0.0-canary.1
     devDependencies:
+      tsconfig:
+        specifier: workspace:*
+        version: link:../tsconfig
+      typescript:
+        specifier: ^4.9.3
+        version: 4.9.5
+
+  packages/terminal:
+    dependencies:
+      '@xterm/addon-canvas':
+        specifier: ^0.6.0
+        version: 0.6.0(@xterm/xterm@5.4.0)
+      '@xterm/addon-fit':
+        specifier: ^0.9.0
+        version: 0.9.0(@xterm/xterm@5.4.0)
+      '@xterm/addon-search':
+        specifier: ^0.14.0
+        version: 0.14.0(@xterm/xterm@5.4.0)
+      '@xterm/addon-web-links':
+        specifier: ^0.10.0
+        version: 0.10.0(@xterm/xterm@5.4.0)
+      '@xterm/addon-webgl':
+        specifier: ^0.17.0
+        version: 0.17.0(@xterm/xterm@5.4.0)
+      '@xterm/xterm':
+        specifier: ^5.4.0
+        version: 5.4.0
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
+      log:
+        specifier: workspace:*
+        version: link:../log
+    devDependencies:
+      '@types/lodash':
+        specifier: ^4.14.194
+        version: 4.14.194
       tsconfig:
         specifier: workspace:*
         version: link:../tsconfig
@@ -1023,6 +1063,50 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: true
+
+  /@xterm/addon-canvas@0.6.0(@xterm/xterm@5.4.0):
+    resolution: {integrity: sha512-+nj2x595vItxfuAFxzXp46Izrh4EnEyS0Z60hX1iy6OFliP5OQu8Wu7n59m7m1vT6Q4nIWoN1WiH+VLAk4D9jQ==}
+    peerDependencies:
+      '@xterm/xterm': ^5.0.0
+    dependencies:
+      '@xterm/xterm': 5.4.0
+    dev: false
+
+  /@xterm/addon-fit@0.9.0(@xterm/xterm@5.4.0):
+    resolution: {integrity: sha512-hDlPPbTVPYyvwXu/asW8HbJkI/2RMi0cMaJnBZYVeJB0SWP2NeESMCNr+I7CvBlyI0sAxpxOg8Wk4OMkxBz9WA==}
+    peerDependencies:
+      '@xterm/xterm': ^5.0.0
+    dependencies:
+      '@xterm/xterm': 5.4.0
+    dev: false
+
+  /@xterm/addon-search@0.14.0(@xterm/xterm@5.4.0):
+    resolution: {integrity: sha512-gyKIjC1c2bqxBevPmWlMWRsHqiufUgl3HjN3OYim6YPClqNRUlTab7l8aW8i3W83XzU9q0gmAfIOe4KDmo0GfQ==}
+    peerDependencies:
+      '@xterm/xterm': ^5.0.0
+    dependencies:
+      '@xterm/xterm': 5.4.0
+    dev: false
+
+  /@xterm/addon-web-links@0.10.0(@xterm/xterm@5.4.0):
+    resolution: {integrity: sha512-QhrHCUr8w6ATGviyXwcAIM1qN3nD1hdxwMC8fsW7z/6aaQlb2nt7zmByJt4eOn7ZzrHOzczljqV5S2pkdQp2xw==}
+    peerDependencies:
+      '@xterm/xterm': ^5.0.0
+    dependencies:
+      '@xterm/xterm': 5.4.0
+    dev: false
+
+  /@xterm/addon-webgl@0.17.0(@xterm/xterm@5.4.0):
+    resolution: {integrity: sha512-KUH//EZCz7j1+IekW8sZzmcj/y9gOLf/HMcsWXjg0Xr5cT1lIBIIbbBlbf5kZ+XnA/8c1IuBm1vx+blzlfPk0g==}
+    peerDependencies:
+      '@xterm/xterm': ^5.0.0
+    dependencies:
+      '@xterm/xterm': 5.4.0
+    dev: false
+
+  /@xterm/xterm@5.4.0:
+    resolution: {integrity: sha512-GlyzcZZ7LJjhFevthHtikhiDIl8lnTSgol6eTM4aoSNLcuXu3OEhnbqdCVIjtIil3jjabf3gDtb1S8FGahsuEw==}
+    dev: false
 
   /abbrev@1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}
@@ -3312,65 +3396,64 @@ packages:
     engines: {node: '>=0.6.x'}
     dev: false
 
-  /turbo-darwin-64@1.10.12:
-    resolution: {integrity: sha512-vmDfGVPl5/aFenAbOj3eOx3ePNcWVUyZwYr7taRl0ZBbmv2TzjRiFotO4vrKCiTVnbqjQqAFQWY2ugbqCI1kOQ==}
+  /turbo-darwin-64@1.12.5:
+    resolution: {integrity: sha512-0GZ8reftwNQgIQLHkHjHEXTc/Z1NJm+YjsrBP+qhM/7yIZ3TEy9gJhuogDt2U0xIWwFgisTyzbtU7xNaQydtoA==}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-darwin-arm64@1.10.12:
-    resolution: {integrity: sha512-3JliEESLNX2s7g54SOBqqkqJ7UhcOGkS0ywMr5SNuvF6kWVTbuUq7uBU/sVbGq8RwvK1ONlhPvJne5MUqBCTCQ==}
+  /turbo-darwin-arm64@1.12.5:
+    resolution: {integrity: sha512-8WpOLNNzvH6kohQOjihD+gaWL+ZFNfjvBwhOF0rjEzvW+YR3Pa7KjhulrjWyeN2yMFqAPubTbZIGOz1EVXLuQA==}
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-64@1.10.12:
-    resolution: {integrity: sha512-siYhgeX0DidIfHSgCR95b8xPee9enKSOjCzx7EjTLmPqPaCiVebRYvbOIYdQWRqiaKh9yfhUtFmtMOMScUf1gg==}
+  /turbo-linux-64@1.12.5:
+    resolution: {integrity: sha512-INit73+bNUpwqGZCxgXCR3I+cQsdkQ3/LkfkgSOibkpg+oGqxJRzeXw3sp990d7SCoE8QOcs3iw+PtiFX/LDAA==}
     cpu: [x64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-arm64@1.10.12:
-    resolution: {integrity: sha512-K/ZhvD9l4SslclaMkTiIrnfcACgos79YcAo4kwc8bnMQaKuUeRpM15sxLpZp3xDjDg8EY93vsKyjaOhdFG2UbA==}
+  /turbo-linux-arm64@1.12.5:
+    resolution: {integrity: sha512-6lkRBvxtI/GQdGtaAec9LvVQUoRw6nXFp0kM+Eu+5PbZqq7yn6cMkgDJLI08zdeui36yXhone8XGI8pHg8bpUQ==}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-64@1.10.12:
-    resolution: {integrity: sha512-7FSgSwvktWDNOqV65l9AbZwcoueAILeE4L7JvjauNASAjjbuzXGCEq5uN8AQU3U5BOFj4TdXrVmO2dX+lLu8Zg==}
+  /turbo-windows-64@1.12.5:
+    resolution: {integrity: sha512-gQYbOhZg5Ww0bQ/bC0w/4W6yQRwBumUUnkB+QPo15VznwxZe2a7bo6JM+9Xy9dKLa/kn+p7zTqme4OEp6M3/Yg==}
     cpu: [x64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-arm64@1.10.12:
-    resolution: {integrity: sha512-gCNXF52dwom1HLY9ry/cneBPOKTBHhzpqhMylcyvJP0vp9zeMQQkt6yjYv+6QdnmELC92CtKNp2FsNZo+z0pyw==}
+  /turbo-windows-arm64@1.12.5:
+    resolution: {integrity: sha512-auvhZ9FrhnvQ4mgBlY9O68MT4dIfprYGvd2uPICba/mHUZZvVy5SGgbHJ0KbMwaJfnnFoPgLJO6M+3N2gDprKw==}
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo@1.10.12:
-    resolution: {integrity: sha512-WM3+jTfQWnB9W208pmP4oeehZcC6JQNlydb/ZHMRrhmQa+htGhWLCzd6Q9rLe0MwZLPpSPFV2/bN5egCLyoKjQ==}
+  /turbo@1.12.5:
+    resolution: {integrity: sha512-FATU5EnhrYG8RvQJYFJnDd18DpccDjyvd53hggw9T9JEg9BhWtIEoeaKtBjYbpXwOVrJQMDdXcIB4f2nD3QPPg==}
     hasBin: true
-    requiresBuild: true
     optionalDependencies:
-      turbo-darwin-64: 1.10.12
-      turbo-darwin-arm64: 1.10.12
-      turbo-linux-64: 1.10.12
-      turbo-linux-arm64: 1.10.12
-      turbo-windows-64: 1.10.12
-      turbo-windows-arm64: 1.10.12
+      turbo-darwin-64: 1.12.5
+      turbo-darwin-arm64: 1.12.5
+      turbo-linux-64: 1.12.5
+      turbo-linux-arm64: 1.12.5
+      turbo-windows-64: 1.12.5
+      turbo-windows-arm64: 1.12.5
     dev: true
 
   /type-check@0.4.0:
