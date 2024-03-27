@@ -1,5 +1,5 @@
-import { IDisposable, ITerminalAddon, Terminal } from '@xterm/xterm'
-import { addSocketListener, log } from '../utils'
+import { ITerminalAddon, Terminal } from '@xterm/xterm'
+import { addSocketListener, Disposable, log } from '../utils'
 
 // 接收消息的类型
 export type ReceiveMessageType = 'stdout' | 'heartbeat' | 'error'
@@ -43,9 +43,7 @@ export interface AttachAddonOptions {
   writer: Writer
 }
 
-export class AttachAddon implements ITerminalAddon {
-  private _disposables: IDisposable[] = []
-
+export class AttachAddon extends Disposable implements ITerminalAddon {
   private socket: WebSocket
 
   private writer: Writer
@@ -57,6 +55,7 @@ export class AttachAddon implements ITerminalAddon {
   private processMessageFromServer: ProcessMessageFromServerFn
 
   constructor(socket: WebSocket, options: AttachAddonOptions) {
+    super()
     // always set binary type to arraybuffer, we do not handle blobs
     socket.binaryType = 'arraybuffer'
 
@@ -76,16 +75,26 @@ export class AttachAddon implements ITerminalAddon {
   }
 
   attachSocket(socket: WebSocket) {
-    this._disposables.push(addSocketListener(socket, 'message', (ev) => this.onMessage(ev.data)))
-    this._disposables.push(addSocketListener(socket, 'close', () => this.dispose()))
-    this._disposables.push(addSocketListener(socket, 'error', () => this.dispose()))
+    this.register(addSocketListener(socket, 'message', (ev) => this.onMessage(ev.data)))
+    this.register(addSocketListener(socket, 'close', () => this.dispose()))
+    this.register(addSocketListener(socket, 'error', () => this.dispose()))
   }
 
   attachTerminal(terminal: Terminal) {
     log.info('terminal', terminal)
-    this._disposables.push(terminal.onData((data) => this.sendMessage('data', data)))
-    this._disposables.push(terminal.onBinary((data) => this.sendMessage('binary', data)))
-    this._disposables.push(terminal.onResize((data) => this.sendMessage('resize', data)))
+    this.register(terminal.onData((data) => this.sendMessage('data', data)))
+    this.register(terminal.onBinary((data) => this.sendMessage('binary', data)))
+    this.register(terminal.onResize((data) => this.sendMessage('resize', data)))
+    // 手动关闭时, 前端发送关闭码
+    this.register({
+      dispose() {
+        if (this._checkOpenSocket()) {
+          log.info('socket close by frontend')
+          this.socket.close(1000, 'frontend close')
+          this.socket = null
+        }
+      },
+    })
   }
 
   onMessage(data: string | ArrayBuffer) {
@@ -104,16 +113,6 @@ export class AttachAddon implements ITerminalAddon {
       if (message) {
         this.socket.send(message)
       }
-    }
-  }
-
-  dispose(): void {
-    if (this._checkOpenSocket()) {
-      this.socket.close(1000, 'frontend close')
-      this.socket = null
-    }
-    for (const d of this._disposables) {
-      d.dispose()
     }
   }
 
