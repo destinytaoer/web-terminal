@@ -1,6 +1,15 @@
 import { IDisposable, ITerminalAddon, Terminal } from '@xterm/xterm'
 import { addSocketListener, log } from '../utils'
 
+// 接收消息的类型
+export type ReceiveMessageType = 'stdout' | 'heartbeat' | 'error'
+
+export type ReceiveMessageData = {
+  type: ReceiveMessageType
+  message?: string | Uint8Array
+  error?: any
+}
+
 // 发送消息的类型
 export type SendMessageType = 'data' | 'binary' | 'resize' | 'heartbeat'
 
@@ -22,13 +31,15 @@ export type SendMessageData =
 
 export type ProcessMessageToServerFn = (data: SendMessageData) => string | ArrayBufferLike | Blob | ArrayBufferView | undefined
 
-export type ProcessMessageFromServerFn = (data: ArrayBuffer | string) => string | Uint8Array
+export type ProcessMessageFromServerFn = (data: ArrayBuffer | string) => ReceiveMessageData
 
 type Writer = (data: string | Uint8Array) => void
+type EmitFn = (event: string, ...args: any[]) => void
 
 export interface AttachAddonOptions {
   processMessageToServer?: ProcessMessageToServerFn
   processMessageFromServer?: ProcessMessageFromServerFn
+  emit: EmitFn
   writer: Writer
 }
 
@@ -39,6 +50,8 @@ export class AttachAddon implements ITerminalAddon {
 
   private writer: Writer
 
+  private emit: EmitFn
+
   private processMessageToServer: ProcessMessageToServerFn
 
   private processMessageFromServer: ProcessMessageFromServerFn
@@ -48,6 +61,7 @@ export class AttachAddon implements ITerminalAddon {
     socket.binaryType = 'arraybuffer'
 
     this.socket = socket
+    this.emit = options.emit
     this.writer = options.writer
     this.processMessageToServer = options.processMessageToServer
     this.processMessageFromServer = options.processMessageFromServer
@@ -75,7 +89,9 @@ export class AttachAddon implements ITerminalAddon {
   }
 
   onMessage(data: string | ArrayBuffer) {
-    const message = this.processMessageFromServer(data)
+    const { type, message, error } = this.processMessageFromServer(data)
+
+    this.emit(`service:${type}`)
 
     if (message) {
       this.writer(message)
@@ -94,6 +110,7 @@ export class AttachAddon implements ITerminalAddon {
   dispose(): void {
     if (this._checkOpenSocket()) {
       this.socket.close(1000, 'frontend close')
+      this.socket = null
     }
     for (const d of this._disposables) {
       d.dispose()

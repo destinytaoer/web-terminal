@@ -1,3 +1,5 @@
 export { TerminalCore } from './core/TerminalCore'
+export { WebTerminal } from './core/WebTerminal'
+export { AttachAddon } from './core/AttachAddon'
 export { TerminalController } from './core/TerminalController'
 export * from './utils'
