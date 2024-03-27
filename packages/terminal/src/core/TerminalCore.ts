@@ -4,12 +4,13 @@ import { WebglAddon } from '@xterm/addon-webgl'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
-import { addDisposableDomListener, Disposable, detectWebGLContext, log } from '../utils'
+import { addDisposableEventListener, Disposable, detectWebGLContext, log } from '../utils'
 import { debounce } from 'lodash'
 
 export interface EnhancedTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'
   webLinks?: boolean
+  fit?: boolean
   xtermOptions?: ITerminalOptions & ITerminalInitOnlyOptions
 }
 
@@ -30,14 +31,16 @@ export class TerminalCore extends Disposable {
     this.options = {
       rendererType: 'webgl',
       webLinks: true,
+      fit: true,
       ...options,
     }
 
-    this.fitAddon = new FitAddon()
     this.xterm = new Terminal({
       cursorBlink: true,
       ...this.options.xtermOptions,
     })
+    // 注册后调用 this.dispose 会自动调用 this.xterm.dispose 清理
+    this.register(this.xterm)
   }
 
   init(element: string | HTMLElement) {
@@ -63,15 +66,19 @@ export class TerminalCore extends Disposable {
     this.xterm.open(element)
 
     // 实现 fit resize 能力
-    // 放置到业务中自行添加
-    // this.fitWindowResize()
+    if (this.options.fit) {
+      this.fitAddon = new FitAddon()
+      // load addon
+      this.xterm.loadAddon(this.fitAddon)
+      this.fit()
+    }
 
     return this.xterm
   }
 
   fit = () => {
     try {
-      this.fitAddon.fit()
+      this.fitAddon?.fit()
     } catch (e) {
       log.error('fit error', e)
     }
@@ -107,17 +114,15 @@ export class TerminalCore extends Disposable {
 
   // 添加 window resize 事件
   fitWindowResize(debounce = true) {
-    // load addon
-    this.xterm.loadAddon(this.fitAddon)
-    this.fit()
-    window.addEventListener('resize', debounce ? this.debounceResizeCb : this.resizeCb)
+    this.register(addDisposableEventListener(window, 'resize', debounce ? this.debounceResizeCb : this.resizeCb))
+    // window.addEventListener('resize', debounce ? this.debounceResizeCb : this.resizeCb)
   }
 
   // 阻止粘贴
   preventPaste = (cb?: () => void) => {
     if (this.xterm.textarea) {
       this.register(
-        addDisposableDomListener(
+        addDisposableEventListener(
           this.xterm.textarea,
           'paste',
           (e) => {
@@ -154,14 +159,6 @@ export class TerminalCore extends Disposable {
   selectAll = () => this.xterm.selectAll()
 
   loadAddon = (addon: ITerminalAddon) => this.xterm.loadAddon(addon)
-
-  destroy() {
-    window.removeEventListener('resize', this.resizeCb)
-    window.removeEventListener('resize', this.debounceResizeCb)
-    this.xterm.dispose()
-    // 清除当前类挂载的事件
-    this.dispose()
-  }
 
   private initRenderer() {
     const { rendererType } = this.options
