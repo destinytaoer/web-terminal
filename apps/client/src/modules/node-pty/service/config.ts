@@ -1,5 +1,7 @@
 import { log, MessageData } from 'core'
 import { WorkerTimer } from 'worker-timer'
+import { ReceiveMessageData } from 'terminal/src/core/AttachAddon'
+import { Buffer } from 'buffer'
 
 // 生成发送给服务端的消息
 export function processMessageToServer(data: MessageData) {
@@ -18,22 +20,22 @@ export function processMessageToServer(data: MessageData) {
 }
 
 // 处理服务端消息
-export function processMessageFromServer(message: string | ArrayBuffer) {
+export function processMessageFromServer(message: string | ArrayBuffer): ReceiveMessageData {
   if (typeof message === 'string') {
     try {
       const data = JSON.parse(message)
       if (data.type === 'input') {
-        return data.content ?? ''
+        return { type: 'stdout', message: data.content ?? '' }
       }
-      return ''
+      return { type: 'stdout', message: data.content ?? '' }
     } catch (e) {
-      return ''
+      return { type: 'error', error: e }
     }
   } else {
-    // const buffer = Buffer.from(message)
-    // const content = buffer.toString()
+    const buffer = Buffer.from(message)
+    const content = buffer.toString()
     // log.info('receive message from server', content)
-    return message
+    return { type: 'stdout', message: buffer }
   }
 }
 

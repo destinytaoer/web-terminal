@@ -96,7 +96,6 @@ export class AttachAddon extends Disposable implements ITerminalAddon {
   }
 
   attachTerminal(terminal: Terminal) {
-    log.info('terminal', terminal)
     this.register(terminal.onData((data) => this.sendMessage('data', data)))
     this.register(terminal.onBinary((data) => this.sendMessage('binary', data)))
     this.register(terminal.onResize((data) => this.sendMessage('resize', data)))
