@@ -152,6 +152,10 @@ export class TerminalCore extends Disposable {
 
   focus = () => this.xterm.focus()
 
+  clear = () => this.xterm.clear()
+
+  reset = () => this.xterm.reset()
+
   scrollToTop = () => this.xterm.scrollToTop()
 
   scrollToBottom = () => this.xterm.scrollToBottom()
