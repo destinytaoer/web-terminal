@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useCreation } from 'ahooks'
 import { v4 as uuid } from 'uuid'
 import { addSocketListener, log, WebTerminal } from 'terminal'
@@ -106,14 +106,25 @@ export const useTerminal = () => {
   const useBinary = searchParams.has('binary')
   const shell = searchParams.get('shell') ?? 'bash'
 
-  const terminal = useCreation(() => {
-    return new WebTerminal()
-  }, [])
+  // const terminal = useCreation(() => {
+  //   console.log('new WebTerminal')
+  //   return new WebTerminal()
+  // }, [])
+  //
+  // useEffect(() => {
+  //   return () => {
+  //     log.info('dispose terminal')
+  //     terminal.dispose()
+  //   }
+  // }, [])
+
+  const [url, setUrl] = useState(`ws://127.0.0.1:3001/node-pty?shell=${shell ?? 'sh'}&useBinary=${useBinary}`)
 
   useEffect(() => {
     if (url && terminalEl.current) {
       const id = uuid()
-      log.info('init terminal')
+      log.info('init terminal11')
+      const terminal = new WebTerminal()
       const xterm = terminal.init(terminalEl.current)
       terminal.fitWindowResize()
 
@@ -122,18 +133,27 @@ export const useTerminal = () => {
 
       const cols = xterm.cols
       const rows = xterm.rows
-      const urlWithQuery = `${url}?id=${id}&cols=${cols}&rows=${rows}&shell=${shell ?? 'sh'}&useBinary=${useBinary}`
+      const urlWithQuery = `${url}&id=${id}&cols=${cols}&rows=${rows}`
 
       log.info('connect socket', urlWithQuery)
       const socket = terminal.connectSocket({
         url: urlWithQuery,
+        heartbeatTime: 15 * 1000,
         processMessageToServer,
         processMessageFromServer,
       })
 
+      terminal.registerListeners()
+
+      terminal.on('service:stdout', (content) => {
+        log.info('stdout', content)
+      })
+
       return () => {
-        log.info('destroy terminal')
+        log.info('clear terminal')
         terminal.dispose()
+        // terminal.xterm.clear()
+        // terminal.xterm.reset()
       }
     }
   }, [url])

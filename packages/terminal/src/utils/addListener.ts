@@ -28,7 +28,7 @@ export function addDisposableEventListener(
   }
 }
 
-export function addEventEmitterListener(em: EventEmitter, eventName: string, handler: EventHandler) {
+export function addEventEmitterListener(em: EventEmitter, eventName: string, handler: EventHandler): IDisposable {
   em.addEventListener(eventName, handler)
   let disposed = false
   return {

@@ -1,5 +1,5 @@
 import { ITerminalAddon, Terminal } from '@xterm/xterm'
-import { addSocketListener, createHeartbeat, Disposable, toDisposable, log } from '../utils'
+import { addSocketListener, createHeartbeat, Disposable, toDisposable, log, EventHandler, addEventEmitterListener, EventEmitter } from '../utils'
 
 // 接收消息的类型
 export type ReceiveMessageType = 'stdout' | 'heartbeat' | 'error'
@@ -34,13 +34,11 @@ export type ProcessMessageToServerFn = (data: SendMessageData) => string | Array
 export type ProcessMessageFromServerFn = (data: ArrayBuffer | string) => ReceiveMessageData
 
 type Writer = (data: string | Uint8Array) => void
-type EmitFn = (event: string, ...args: any[]) => void
 
 export interface AttachAddonOptions {
   processMessageToServer?: ProcessMessageToServerFn
   processMessageFromServer?: ProcessMessageFromServerFn
-  heartbeatTime: number
-  emit: EmitFn
+  heartbeatTime?: number | false
   writer: Writer
 }
 
@@ -49,13 +47,13 @@ export class AttachAddon extends Disposable implements ITerminalAddon {
 
   private writer: Writer
 
-  private emit: EmitFn
+  private eventEmitter: EventEmitter
 
   private processMessageToServer: ProcessMessageToServerFn
 
   private processMessageFromServer: ProcessMessageFromServerFn
 
-  private heartbeatTime: number
+  private heartbeatTime: number | false
 
   constructor(socket: WebSocket, options: AttachAddonOptions) {
     super()
@@ -63,7 +61,7 @@ export class AttachAddon extends Disposable implements ITerminalAddon {
     socket.binaryType = 'arraybuffer'
 
     this.socket = socket
-    this.emit = options.emit
+    this.eventEmitter = new EventEmitter()
     this.writer = options.writer
     this.heartbeatTime = options.heartbeatTime
     this.processMessageToServer = options.processMessageToServer
@@ -81,8 +79,8 @@ export class AttachAddon extends Disposable implements ITerminalAddon {
   attachSocket(socket: WebSocket) {
     this.register(addSocketListener(socket, 'message', (ev) => this.onMessage(ev.data)))
     this.register(addSocketListener(socket, 'close', () => this.dispose()))
-    // this.register(addSocketListener(socket, 'error', () => this.dispose()))
-    this.addHeartbeat(this.heartbeatTime)
+    this.register(addSocketListener(socket, 'error', () => this.dispose()))
+    if (this.heartbeatTime) this.addHeartbeat(this.heartbeatTime)
     this.register(
       toDisposable(() => {
         // 手动关闭时, 前端发送关闭码
@@ -99,6 +97,30 @@ export class AttachAddon extends Disposable implements ITerminalAddon {
     this.register(terminal.onData((data) => this.sendMessage('data', data)))
     this.register(terminal.onBinary((data) => this.sendMessage('binary', data)))
     this.register(terminal.onResize((data) => this.sendMessage('resize', data)))
+  }
+
+  onMessage(data: string | ArrayBuffer) {
+    const content = this.processMessageFromServer(data)
+    const { type, message, error } = content
+
+    this.eventEmitter.emit(`service:${type}`, content)
+
+    if (message) {
+      this.writer(message)
+    }
+  }
+
+  sendMessage<T extends SendMessageType>(type: T, data?: any) {
+    if (this._checkOpenSocket()) {
+      const message = this.processMessageToServer({ type, content: data })
+      if (message) {
+        this.socket.send(message)
+      }
+    }
+  }
+
+  on(event: string, fn: EventHandler) {
+    return this.register(addEventEmitterListener(this.eventEmitter, event, fn))
   }
 
   private addHeartbeat(heartbeatTime: number) {
@@ -120,25 +142,6 @@ export class AttachAddon extends Disposable implements ITerminalAddon {
         heartbeat.stop()
       }),
     )
-  }
-
-  onMessage(data: string | ArrayBuffer) {
-    const { type, message, error } = this.processMessageFromServer(data)
-
-    this.emit(`service:${type}`)
-
-    if (message) {
-      this.writer(message)
-    }
-  }
-
-  sendMessage<T extends SendMessageType>(type: T, data?: any) {
-    if (this._checkOpenSocket()) {
-      const message = this.processMessageToServer({ type, content: data })
-      if (message) {
-        this.socket.send(message)
-      }
-    }
   }
 
   private _checkOpenSocket(): boolean {

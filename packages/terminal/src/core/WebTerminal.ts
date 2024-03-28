@@ -1,8 +1,8 @@
 import { EnhancedTerminalOptions, TerminalCore } from './TerminalCore'
 import { AttachAddon, AttachAddonOptions, SendMessageType } from './AttachAddon'
-import { addEventEmitterListener, addSocketListener, addDisposableEventListener, EventEmitter, EventHandler, createHeartbeat, log } from '../utils'
+import { addSocketListener, EventHandler, log } from '../utils'
 
-type ConnectSocketOptions = Pick<AttachAddonOptions, 'processMessageFromServer' | 'processMessageToServer'> & {
+type ConnectSocketOptions = Pick<AttachAddonOptions, 'processMessageFromServer' | 'processMessageToServer' | 'heartbeatTime'> & {
   url: string
   protocols?: string | string[]
 }
@@ -10,33 +10,27 @@ type ConnectSocketOptions = Pick<AttachAddonOptions, 'processMessageFromServer' 
 export class WebTerminal extends TerminalCore {
   socket?: WebSocket
 
-  private eventEmitter: EventEmitter
-
   private attachAddon?: AttachAddon
 
   constructor(options: EnhancedTerminalOptions = {}) {
     super(options)
-    this.eventEmitter = new EventEmitter()
   }
 
   connectSocket(options: ConnectSocketOptions) {
-    const { url, protocols, processMessageFromServer, processMessageToServer } = options
+    const { url, protocols, processMessageFromServer, processMessageToServer, heartbeatTime = false } = options
     const socket = new WebSocket(url, protocols)
     this.socket = socket
 
     const attachAddon = new AttachAddon(socket, {
       processMessageFromServer,
       processMessageToServer,
-      heartbeatTime: 15 * 1000,
-      emit: this.eventEmitter.emit.bind(this.eventEmitter),
+      heartbeatTime,
       writer: this.writer.bind(this),
     })
     this.attachAddon = attachAddon
 
     // loadAddon 的时候调用 addon 的 activate, 传入参数 terminal
     this.loadAddon(attachAddon)
-
-    this.registerListeners()
 
     return socket
   }
@@ -66,7 +60,7 @@ export class WebTerminal extends TerminalCore {
   }
 
   on(event: string, fn: EventHandler) {
-    this.register(addEventEmitterListener(this.eventEmitter, event, fn))
+    return this.attachAddon?.on(event, fn)
   }
 
   writer(data: string | Uint8Array, callback?: () => void) {
