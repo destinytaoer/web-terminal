@@ -5,5 +5,5 @@ interface IBasicProps {}
 export function Basic(props: IBasicProps) {
   const {} = props
   const { terminalEl } = useTerminal()
-  return <div ref={terminalEl} className='w-screen h-screen bg-black'></div>
+  return <div ref={terminalEl} className='w-screen h-screen'></div>
 }

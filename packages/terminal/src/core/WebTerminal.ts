@@ -35,26 +35,6 @@ export class WebTerminal extends TerminalCore {
     return socket
   }
 
-  registerListeners() {
-    this.register(
-      addSocketListener(this.socket, 'open', () => {
-        log.success('socket open')
-        this.focus()
-      }),
-    )
-    this.register(
-      addSocketListener(this.socket, 'error', () => {
-        this.write('Connect Error.')
-      }),
-    )
-
-    this.register(
-      addSocketListener(this.socket, 'close', () => {
-        this.write('disconnect.')
-      }),
-    )
-  }
-
   sendMessage(type: SendMessageType, data?: any) {
     this.attachAddon?.sendMessage(type, data)
   }

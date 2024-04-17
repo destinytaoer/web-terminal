@@ -4,6 +4,8 @@
  * - https://www2.ccs.neu.edu/research/gpc/VonaUtils/vona/terminal/vtansi.htm
  * - https://en.wikipedia.org/wiki/ANSI_escape_code
  */
+import { C0, C1, C1_ESCAPED } from '@xterm/xterm/src/common/data/EscapeSequences'
+
 export const TerminalController = {
   // 回车 CARRIAGE_RETURN
   CR: '\x0d', // \r

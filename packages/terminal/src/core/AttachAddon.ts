@@ -85,7 +85,7 @@ export class AttachAddon extends Disposable implements ITerminalAddon {
       toDisposable(() => {
         // 手动关闭时, 前端发送关闭码
         if (this._checkOpenSocket()) {
-          log.info('socket close by frontend')
+          log.success('socket close by frontend')
           this.socket.close(1000, 'frontend close')
           this.socket = null
         }

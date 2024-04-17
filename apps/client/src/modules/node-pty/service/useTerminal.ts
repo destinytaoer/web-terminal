@@ -123,7 +123,7 @@ export const useTerminal = () => {
   useEffect(() => {
     if (url && terminalEl.current) {
       const id = uuid()
-      log.info('init terminal11')
+      log.info('init terminal')
       const terminal = new WebTerminal()
       const xterm = terminal.init(terminalEl.current)
       terminal.fitWindowResize()
@@ -143,7 +143,26 @@ export const useTerminal = () => {
         processMessageFromServer,
       })
 
-      terminal.registerListeners()
+      terminal.register(
+        addSocketListener(socket, 'open', () => {
+          log.success('socket open')
+          terminal.focus()
+        }),
+      )
+      terminal.register(
+        addSocketListener(socket, 'error', (e: Event) => {
+          log.error('socket error', e)
+          terminal.write('Connect Error.')
+        }),
+      )
+
+      terminal.register(
+        addSocketListener(socket, 'close', (e: CloseEvent) => {
+          const { code, reason } = e
+          log.error('socket close', code, reason, new Date().toLocaleString())
+          terminal.write('disconnect.')
+        }),
+      )
 
       terminal.on('service:stdout', (content) => {
         log.info('stdout', content)
@@ -152,8 +171,6 @@ export const useTerminal = () => {
       return () => {
         log.info('clear terminal')
         terminal.dispose()
-        // terminal.xterm.clear()
-        // terminal.xterm.reset()
       }
     }
   }, [url])

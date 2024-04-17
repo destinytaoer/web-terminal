@@ -1,20 +1,19 @@
 import { useEffect, useRef } from 'react'
 import { useCreation } from 'ahooks'
-import { log, WebTerminal } from 'core'
+import { log, WebTerminal } from 'terminal'
 import { processMessageToServer, k8s, processMessageFromServer } from './config'
 
-const url = 'wss://xxx/exec'
-const token = 'NAz0nAI34X1UpS5lILOKbK1fO2I_3Qh7UVKq2-kt_3o.650omNloyCWKfLWrlZFDGtsVLLi02evhjlxqLQgDfX8'
+const url = ''
+const token = ''
 export const useTerminal = () => {
   const terminalEl = useRef<HTMLDivElement>(null)
-  const terminal = useCreation(() => {
-    return new WebTerminal({
-      enableZmodem: true,
-    })
-  }, [])
+  // const terminal = useCreation(() => {
+  //   return new WebTerminal()
+  // }, [])
 
   useEffect(() => {
     if (url && terminalEl.current) {
+      const terminal = new WebTerminal()
       const xterm = terminal.init(terminalEl.current)
       terminal.fitWindowResize()
 
@@ -22,21 +21,16 @@ export const useTerminal = () => {
       const rows = xterm.rows
       const urlWithQuery = `${url}?token=${token}&columns=${cols}&lines=${rows}`
 
-      const socket = terminal.connectSocket(urlWithQuery, [k8s.protocol.binary], {
+      const socket = terminal.connectSocket({
+        url: urlWithQuery,
+        protocols: [k8s.protocol.binary],
+        heartbeatTime: 15 * 1000,
         processMessageToServer,
         processMessageFromServer,
-        onSend: () => {
-          log.success('on rz send')
-        },
       })
 
-      // 添加心跳
-      let timer: number | undefined
       const onopen = () => {
         terminal.focus()
-        timer = window.setInterval(function () {
-          socket?.sendMessage('heartbeat')
-        }, 30 * 1000)
       }
       const onerror = () => {
         terminal.write('Connect Error.')
@@ -45,8 +39,11 @@ export const useTerminal = () => {
         const { code, reason } = e
         console.error('close', code, reason)
         terminal.write('disconnect.')
-        if (timer) clearInterval(timer)
       }
+
+      terminal.on('service:stdout', (content) => {
+        log.info('stdout', content)
+      })
 
       socket.addEventListener('open', onopen)
 
@@ -55,13 +52,12 @@ export const useTerminal = () => {
       socket.addEventListener('close', onclose)
 
       return () => {
-        if (timer) clearInterval(timer)
         socket.removeEventListener('open', onopen)
 
         socket.removeEventListener('error', onerror)
 
         socket.removeEventListener('close', onclose)
-        terminal.destroy()
+        terminal.dispose()
       }
     }
   }, [url])

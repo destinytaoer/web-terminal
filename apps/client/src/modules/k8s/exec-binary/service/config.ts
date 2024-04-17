@@ -80,9 +80,11 @@ export function processMessageFromServer(data: string | ArrayBuffer) {
     const type = buffer[0]
     const content = buffer.slice(1).toString('utf8')
     switch (type) {
+      case k8s.messageChannel.StdIn:
+        return { type: 'heartbeat', message: '' }
       case k8s.messageChannel.StdOut:
       case k8s.messageChannel.StdError:
-        return content
+        return { type: 'stdout', message: content }
       case k8s.messageChannel.ServiceError:
         const reg = /exit code ([0-9]+)/
         const msg = content
@@ -90,17 +92,29 @@ export function processMessageFromServer(data: string | ArrayBuffer) {
         switch (exitCode) {
           case '137':
             console.error('exit code 137: pod terminated')
-            return ''
+            return {
+              type: 'error',
+              message: '',
+              error: { exitCode: 137, message: 'exit code 137: pod terminated' },
+            }
           case undefined:
             console.error(msg)
-            return ''
+            return {
+              type: 'error',
+              message: '',
+              error: { message: msg },
+            }
           default:
             console.error(`exit code ${exitCode}: ${msg}`)
-            return ''
+            return {
+              type: 'error',
+              message: '',
+              error: { exitCode, message: msg },
+            }
         }
     }
   }
-  return ''
+  return { type: 'stdout', message: '' }
 }
 
 // https://github.com/aws/aws-sdk-js/blob/master/lib/util.js
