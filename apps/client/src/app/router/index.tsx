@@ -25,18 +25,6 @@ export const router = createBrowserRouter([
         path: '/node-pty',
         element: <NodePty />,
       },
-      {
-        path: '/exec-base64',
-        element: <ExecBase64 />,
-      },
-      {
-        path: '/exec-binary',
-        element: <ExecBinary />,
-      },
-      {
-        path: '/exec-zmodem',
-        element: <ExecZmodem />,
-      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
