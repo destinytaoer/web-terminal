@@ -1,4 +1,4 @@
-import ms from 'ms'
+import ms from './ms'
 
 type LogType = 'info' | 'success' | 'error' | 'warn'
 
@@ -13,7 +13,17 @@ interface LogOptions {
   shortNamespace?: boolean
 }
 
+const LogLevel = {
+  info: 0,
+  warn: 1,
+  error: 2,
+  success: 2,
+} as const
+
 export default class Logger {
+  // log Level info-0 warn-1 error-2 success-2
+  static logLevel = 0
+
   static namespaces = ''
 
   static names: RegExp[] = []
@@ -44,7 +54,10 @@ export default class Logger {
   }
 
   static disable() {
-    const namespaces = [...Logger.names.map(toNamespace), ...Logger.skips.map(toNamespace).map((namespace) => '-' + namespace)].join(',')
+    const namespaces = [
+      ...Logger.names.map(toNamespace),
+      ...Logger.skips.map(toNamespace).map((namespace) => '-' + namespace),
+    ].join(',')
     Logger.enable('')
     return namespaces
   }
@@ -108,10 +121,11 @@ export default class Logger {
   }
 
   private log(type: LogType, ...args: any[]) {
-    if (type === 'error') console.error(...args)
-    if (type === 'warn') console.warn(...args)
-
-    if (!this.enabled) return
+    if (Logger.logLevel > LogLevel[type]) return
+    if (!this.enabled) {
+      if (type === 'error') console.error(...args)
+      return
+    }
     const curr = Number(new Date())
     this.diff = curr - (this.cur || curr)
     this.prev = this.cur
@@ -151,5 +165,20 @@ export default class Logger {
 
   warn(...args: any[]) {
     this.log('warn', ...args)
+  }
+
+  group(label: string) {
+    if (!this.enabled) return
+
+    if (console.groupCollapsed) {
+      console.groupCollapsed(label)
+    } else {
+      console.group(label)
+    }
+  }
+
+  groupEnd() {
+    if (!this.enabled) return
+    console.groupEnd()
   }
 }

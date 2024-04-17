@@ -1,4 +1,4 @@
-import { WorkerTimer } from 'worker-timer'
+import { WorkerTimer } from './worker-timer'
 
 // 创建心跳
 export function createHeartbeat(heartbeat: () => void, heartbeatTime = 30 * 1000) {

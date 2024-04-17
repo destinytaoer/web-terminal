@@ -1,4 +1,5 @@
 {
+  "name": "web-terminal",
   "private": true,
   "scripts": {
     "build": "turbo run build",
@@ -12,10 +13,5 @@
     "turbo": "latest"
   },
   "packageManager": "pnpm@7.15.0",
-  "name": "web-terminal",
-  "pnpm": {
-    "patchedDependencies": {
-      "zmodem.js@0.1.10": "patches/zmodem.js@0.1.10.patch"
-    }
-  }
+  "author": "zhuweilong"
 }

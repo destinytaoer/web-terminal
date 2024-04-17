@@ -1,10 +1,5 @@
 lockfileVersion: '6.0'
 
-patchedDependencies:
-  zmodem.js@0.1.10:
-    hash: syngie7lp2urj6n3bpx6rhwsju
-    path: patches/zmodem.js@0.1.10.patch
-
 importers:
 
   .:
@@ -17,7 +12,7 @@ importers:
         version: 2.8.7
       turbo:
         specifier: latest
-        version: 1.13.0
+        version: 1.13.2
 
   apps/client:
     dependencies:
@@ -33,15 +28,9 @@ importers:
       classnames:
         specifier: ^2.3.2
         version: 2.3.2
-      core:
-        specifier: workspace:*
-        version: link:../../packages/core
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
-      log:
-        specifier: workspace:^1.0.0
-        version: link:../../packages/log
       react:
         specifier: ^18.2.0
         version: 18.2.0
@@ -57,9 +46,6 @@ importers:
       uuid:
         specifier: ^9.0.0
         version: 9.0.0
-      worker-timer:
-        specifier: workspace:*
-        version: link:../../packages/worker-timer
       xterm:
         specifier: ^5.1.0
         version: 5.1.0
@@ -135,71 +121,6 @@ importers:
         specifier: ^2.0.22
         version: 2.0.22
 
-  packages/core:
-    dependencies:
-      buffer:
-        specifier: ^6.0.3
-        version: 6.0.3
-      file-saver:
-        specifier: ^2.0.5
-        version: 2.0.5
-      lodash:
-        specifier: ^4.17.21
-        version: 4.17.21
-      log:
-        specifier: workspace:*
-        version: link:../log
-      trzsz:
-        specifier: workspace:*
-        version: link:../trzsz
-      xterm:
-        specifier: ^5.1.0
-        version: 5.1.0
-      xterm-addon-canvas:
-        specifier: ^0.3.0
-        version: 0.3.0(xterm@5.1.0)
-      xterm-addon-fit:
-        specifier: ^0.7.0
-        version: 0.7.0(xterm@5.1.0)
-      xterm-addon-web-links:
-        specifier: ^0.8.0
-        version: 0.8.0(xterm@5.1.0)
-      xterm-addon-webgl:
-        specifier: ^0.14.0
-        version: 0.14.0(xterm@5.1.0)
-      zmodem:
-        specifier: workspace:*
-        version: link:../zmodem
-      zmodem.js:
-        specifier: ^0.1.10
-        version: 0.1.10(patch_hash=syngie7lp2urj6n3bpx6rhwsju)
-    devDependencies:
-      '@types/file-saver':
-        specifier: ^2.0.5
-        version: 2.0.5
-      '@types/lodash':
-        specifier: ^4.14.194
-        version: 4.14.194
-      tsconfig:
-        specifier: workspace:*
-        version: link:../tsconfig
-      typescript:
-        specifier: ^4.9.3
-        version: 4.9.5
-
-  packages/log:
-    dependencies:
-      ms:
-        specifier: 3.0.0-canary.1
-        version: 3.0.0-canary.1
-    devDependencies:
-      tsconfig:
-        specifier: workspace:*
-        version: link:../tsconfig
-      typescript:
-        specifier: ^4.9.3
-        version: 4.9.5
-
   packages/terminal:
     dependencies:
       '@xterm/addon-canvas':
@@ -223,12 +144,6 @@ importers:
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
-      log:
-        specifier: workspace:*
-        version: link:../log
-      worker-timer:
-        specifier: workspace:*
-        version: link:../worker-timer
     devDependencies:
       '@types/lodash':
         specifier: ^4.14.194
@@ -240,18 +155,33 @@ importers:
         specifier: ^4.9.3
         version: 4.9.5
 
-  packages/trzsz:
+  packages/terminal-v3:
     dependencies:
-      base64-js:
-        specifier: ^1.5.1
-        version: 1.5.1
-      pako:
-        specifier: ^2.1.0
-        version: 2.1.0
-      ts-md5:
-        specifier: ^1.3.1
-        version: 1.3.1
+      '@xterm/addon-canvas':
+        specifier: ^0.6.0
+        version: 0.6.0(@xterm/xterm@5.4.0)
+      '@xterm/addon-fit':
+        specifier: ^0.9.0
+        version: 0.9.0(@xterm/xterm@5.4.0)
+      '@xterm/addon-search':
+        specifier: ^0.14.0
+        version: 0.14.0(@xterm/xterm@5.4.0)
+      '@xterm/addon-web-links':
+        specifier: ^0.10.0
+        version: 0.10.0(@xterm/xterm@5.4.0)
+      '@xterm/addon-webgl':
+        specifier: ^0.17.0
+        version: 0.17.0(@xterm/xterm@5.4.0)
+      '@xterm/xterm':
+        specifier: ^5.4.0
+        version: 5.4.0
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
     devDependencies:
+      '@types/lodash':
+        specifier: ^4.14.194
+        version: 4.14.194
       tsconfig:
         specifier: workspace:*
         version: link:../tsconfig
@@ -260,28 +190,6 @@ importers:
         version: 4.9.5
 
   packages/tsconfig: {}
-
-  packages/worker-timer:
-    devDependencies:
-      tsconfig:
-        specifier: workspace:*
-        version: link:../tsconfig
-      typescript:
-        specifier: ^4.9.3
-        version: 4.9.5
-
-  packages/zmodem:
-    dependencies:
-      crc-32:
-        specifier: 1.1.1
-        version: 1.1.1
-    devDependencies:
-      tsconfig:
-        specifier: workspace:*
-        version: link:../tsconfig
-      typescript:
-        specifier: ^4.9.3
-        version: 4.9.5
 
 packages:
 
@@ -1009,10 +917,6 @@ packages:
     engines: {node: '>=14'}
     dev: false
 
-  /@types/file-saver@2.0.5:
-    resolution: {integrity: sha512-zv9kNf3keYegP5oThGLaPk8E081DFDuwfqjtiTzm6PoxChdJ1raSuADf2YGCVIyrSynLrgc8JWv296s7Q7pQSQ==}
-    dev: true
-
   /@types/js-cookie@2.2.7:
     resolution: {integrity: sha512-aLkWa0C0vO5b4Sr798E26QgOkss68Un0bLjs7u9qxzPT5CG+8DuNTffWES58YzJs3hrVAOs1wonycqEBqNJubA==}
     dev: false
@@ -1465,15 +1369,6 @@ packages:
       toggle-selection: 1.0.6
     dev: false
 
-  /crc-32@1.1.1:
-    resolution: {integrity: sha512-DWXuRN3Wtu43YRfYZ9r17720WZqM0caEjIfT6Dk1J/3sAxIyyXbUWqIACbz3cjV8l7guJRW+9pZlYMluKJ69wg==}
-    engines: {node: '>=0.8'}
-    hasBin: true
-    dependencies:
-      exit-on-epipe: 1.0.1
-      printj: 1.1.2
-    dev: false
-
   /cross-spawn@7.0.3:
     resolution: {integrity: sha512-iRDPJKUPVEND7dHPO8rkbOnPpyDygcDFtWjpeWNCgy8WP2rXcxXL8TskReQl6OrB2G7+UJrags1q15Fudc7G6w==}
     engines: {node: '>= 8'}
@@ -1722,11 +1617,6 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
-  /exit-on-epipe@1.0.1:
-    resolution: {integrity: sha512-h2z5mrROTxce56S+pnvAV890uu7ls7f1kEvVGJbw1OlFH3/mlJ5bkXu0KRyW94v37zzHPiUd55iLn3DA7TjWpw==}
-    engines: {node: '>=0.8'}
-    dev: false
-
   /fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
     dev: true
@@ -1762,10 +1652,6 @@ packages:
     dependencies:
       flat-cache: 3.0.4
     dev: true
-
-  /file-saver@2.0.5:
-    resolution: {integrity: sha512-P9bmyZ3h/PRG+Nzga+rbdI4OEpNDzAVyy74uVO9ATgzLK6VtAsYybF/+TOCvrc0MO793d6+42lLyZTw7/ArVzA==}
-    dev: false
 
   /fill-range@7.0.1:
     resolution: {integrity: sha512-qOo9F+dMUmC2Lcb4BbVvnKJxTPjCm+RRpe4gDuGrzkL7mEVl/djYSu2OdQ2Pa302N4oqkSg9ir6jaLWJ2USVpQ==}
@@ -2220,11 +2106,6 @@ packages:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
     dev: true
 
-  /ms@3.0.0-canary.1:
-    resolution: {integrity: sha512-kh8ARjh8rMN7Du2igDRO9QJnqCb2xYTJxyQYK7vJJS4TvLLmsbyhiKpSW+t+y26gyOyMd0riphX0GeWKU3ky5g==}
-    engines: {node: '>=12.13'}
-    dev: false
-
   /mz@2.7.0:
     resolution: {integrity: sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==}
     dependencies:
@@ -2349,10 +2230,6 @@ packages:
     dependencies:
       p-limit: 3.1.0
     dev: true
-
-  /pako@2.1.0:
-    resolution: {integrity: sha512-w+eufiZ1WuJYgPXbV/PO3NCMEc3xqylkKHzp8bxp1uW4qaSNQUkwmLLEc3kKsfz8lpV1F8Ht3U1Cm+9Srog2ug==}
-    dev: false
 
   /parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
@@ -2488,12 +2365,6 @@ packages:
     engines: {node: '>=10.13.0'}
     hasBin: true
     dev: true
-
-  /printj@1.1.2:
-    resolution: {integrity: sha512-zA2SmoLaxZyArQTOPj5LXecR+RagfPSU5Kw1qP+jkWeNlrq+eJZyY2oS68SU1Z/7/myXM4lo9716laOFAVStCQ==}
-    engines: {node: '>=0.8'}
-    hasBin: true
-    dev: false
 
   /pstree.remy@1.1.8:
     resolution: {integrity: sha512-77DZwxQmxKnu3aR542U+X8FypNzbfJ+C5XQDk3uWjWxn6151aIMGthWYRXTqT1E5oJvg+ljaa2OJi+VfvCOQ8w==}
@@ -3385,11 +3256,6 @@ packages:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
     dev: true
 
-  /ts-md5@1.3.1:
-    resolution: {integrity: sha512-DiwiXfwvcTeZ5wCE0z+2A9EseZsztaiZtGrtSaY5JOD7ekPnR/GoIVD5gXZAlK9Na9Kvpo9Waz5rW64WKAWApg==}
-    engines: {node: '>=12'}
-    dev: false
-
   /tslib@2.4.1:
     resolution: {integrity: sha512-tGyy4dAjRIEwI7BzsB0lynWgOpfqjUdq91XXAlIWD2OwKBH7oCl/GZG/HT4BOHrTlPMOASlMQ7veyTqpmRcrNA==}
     dev: false
@@ -3399,64 +3265,64 @@ packages:
     engines: {node: '>=0.6.x'}
     dev: false
 
-  /turbo-darwin-64@1.13.0:
-    resolution: {integrity: sha512-ctHeJXtQgBcgxnCXwrJTGiq57HtwF7zWz5NTuSv//5yeU01BtQIt62ArKfjudOhRefWJbX3Z5srn88XTb9hfww==}
+  /turbo-darwin-64@1.13.2:
+    resolution: {integrity: sha512-CCSuD8CfmtncpohCuIgq7eAzUas0IwSbHfI8/Q3vKObTdXyN8vAo01gwqXjDGpzG9bTEVedD0GmLbD23dR0MLA==}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-darwin-arm64@1.13.0:
-    resolution: {integrity: sha512-/Q9/pNFkF9w83tNxwMpgapwLYdQ12p8mpty2YQRoUiS9ClWkcqe136jR0mtuMqzlNlpREOFZaoyIthjt6Sdo0g==}
+  /turbo-darwin-arm64@1.13.2:
+    resolution: {integrity: sha512-0HySm06/D2N91rJJ89FbiI/AodmY8B3WDSFTVEpu2+8spUw7hOJ8okWOT0e5iGlyayUP9gr31eOeL3VFZkpfCw==}
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-64@1.13.0:
-    resolution: {integrity: sha512-hgbT7o020BGV4L7Sd8hhFTd5zVKPKxbsr0dPfel/9NkdTmptz2aGZ0Vb2MAa18SY3XaCQpDxmdYuOzvvRpo5ZA==}
+  /turbo-linux-64@1.13.2:
+    resolution: {integrity: sha512-7HnibgbqZrjn4lcfIouzlPu8ZHSBtURG4c7Bedu7WJUDeZo+RE1crlrQm8wuwO54S0siYqUqo7GNHxu4IXbioQ==}
     cpu: [x64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-linux-arm64@1.13.0:
-    resolution: {integrity: sha512-WK01i2wDZARrV+HEs495A3hNeGMwQR5suYk7G+ceqqW7b+dOTlQdvUjnI3sg7wAnZPgjafFs/hoBaZdJjVa/nw==}
+  /turbo-linux-arm64@1.13.2:
+    resolution: {integrity: sha512-sUq4dbpk6SNKg/Hkwn256Vj2AEYSQdG96repio894h5/LEfauIK2QYiC/xxAeW3WBMc6BngmvNyURIg7ltrePg==}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-64@1.13.0:
-    resolution: {integrity: sha512-hJgSZJZwlWHNwLEthaqJqJWGm4NqF5X/I7vE0sPE4i/jeDl8f0n1hcOkgJkJiNXVxhj+qy/9+4dzbPLKT9imaQ==}
+  /turbo-windows-64@1.13.2:
+    resolution: {integrity: sha512-DqzhcrciWq3dpzllJR2VVIyOhSlXYCo4mNEWl98DJ3FZ08PEzcI3ceudlH6F0t/nIcfSItK1bDP39cs7YoZHEA==}
     cpu: [x64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo-windows-arm64@1.13.0:
-    resolution: {integrity: sha512-L/ErxYoXeq8tmjU/AIGicC9VyBN1zdYw8JlM4yPmMI0pJdY8E4GaYK1IiIazqq7M72lmQhU/WW7fV9FqEktwrw==}
+  /turbo-windows-arm64@1.13.2:
+    resolution: {integrity: sha512-WnPMrwfCXxK69CdDfS1/j2DlzcKxSmycgDAqV0XCYpK/812KB0KlvsVAt5PjEbZGXkY88pCJ1BLZHAjF5FcbqA==}
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /turbo@1.13.0:
-    resolution: {integrity: sha512-r02GtNmkOPcQvUzVE6lg474QVLyU02r3yh3lUGqrFHf5h5ZEjgDGWILsAUqplVqjri1Y/oOkTssks4CObTAaiw==}
+  /turbo@1.13.2:
+    resolution: {integrity: sha512-rX/d9f4MgRT3yK6cERPAkfavIxbpBZowDQpgvkYwGMGDQ0Nvw1nc0NVjruE76GrzXQqoxR1UpnmEP54vBARFHQ==}
     hasBin: true
     optionalDependencies:
-      turbo-darwin-64: 1.13.0
-      turbo-darwin-arm64: 1.13.0
-      turbo-linux-64: 1.13.0
-      turbo-linux-arm64: 1.13.0
-      turbo-windows-64: 1.13.0
-      turbo-windows-arm64: 1.13.0
+      turbo-darwin-64: 1.13.2
+      turbo-darwin-arm64: 1.13.2
+      turbo-linux-64: 1.13.2
+      turbo-linux-arm64: 1.13.2
+      turbo-windows-64: 1.13.2
+      turbo-windows-arm64: 1.13.2
     dev: true
 
   /type-check@0.4.0:
@@ -3643,13 +3509,6 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
     dev: true
-
-  /zmodem.js@0.1.10(patch_hash=syngie7lp2urj6n3bpx6rhwsju):
-    resolution: {integrity: sha512-Z1DWngunZ/j3BmIzSJpFZVNV73iHkj89rxXX4IciJdU9ga3nZ7rJ5LkfjV/QDsKhc7bazDWTTJCLJ+iRXD82dw==}
-    dependencies:
-      crc-32: 1.1.1
-    dev: false
-    patched: true
 
 settings:
   autoInstallPeers: true

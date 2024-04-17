@@ -1,5 +1,5 @@
-import { worker } from './worker.ts'
-import { TimerMethod, TimerCallback, CallbackMap, CallMessage } from './types'
+import { CallbackMap, CallMessage, TimerCallback, TimerMethod } from './types'
+import { worker } from './worker'
 
 const createWorker = (fn: () => any, options?: WorkerOptions) => {
   const blob = new Blob(['(' + fn.toString() + ')()'])
@@ -10,7 +10,7 @@ const createWorker = (fn: () => any, options?: WorkerOptions) => {
   return new Worker(url)
 }
 
-class WorkerTimer {
+export class WorkerTimer {
   private _worker = createWorker(worker)
   private _cbMap: CallbackMap = new Map()
 
@@ -66,5 +66,3 @@ class WorkerTimer {
     })
   }
 }
-
-export default WorkerTimer
