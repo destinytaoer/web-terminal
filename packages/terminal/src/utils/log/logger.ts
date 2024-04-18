@@ -15,13 +15,13 @@ interface LogOptions {
 
 const LogLevel = {
   info: 0,
-  warn: 1,
-  error: 2,
-  success: 2,
+  success: 1,
+  warn: 2,
+  error: 3,
 } as const
 
 export default class Logger {
-  // log Level info-0 warn-1 error-2 success-2
+  // log Level info-0 success-1 warn-2 error-3
   static logLevel = 0
 
   static namespaces = ''
@@ -54,10 +54,7 @@ export default class Logger {
   }
 
   static disable() {
-    const namespaces = [
-      ...Logger.names.map(toNamespace),
-      ...Logger.skips.map(toNamespace).map((namespace) => '-' + namespace),
-    ].join(',')
+    const namespaces = [...Logger.names.map(toNamespace), ...Logger.skips.map(toNamespace).map((namespace) => '-' + namespace)].join(',')
     Logger.enable('')
     return namespaces
   }
@@ -123,7 +120,9 @@ export default class Logger {
   private log(type: LogType, ...args: any[]) {
     if (Logger.logLevel > LogLevel[type]) return
     if (!this.enabled) {
-      if (type === 'error') console.error(...args)
+      if (type === 'success') console.log(args[0] + ': ', ...args.slice(1))
+      if (type === 'warn') console.warn(args[0] + ': ', ...args.slice(1))
+      if (type === 'error') console.error(args[0] + ': ', ...args.slice(1))
       return
     }
     const curr = Number(new Date())
