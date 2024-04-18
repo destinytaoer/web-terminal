@@ -6,3 +6,5 @@ export { EventEmitter } from './EventEmitter'
 export type { EventHandler } from './EventEmitter'
 
 export { createHeartbeat } from './createHeartbeat'
+export * from './log'
+export * from './worker-timer'
