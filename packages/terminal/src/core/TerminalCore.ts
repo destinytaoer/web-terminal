@@ -3,25 +3,31 @@ import { CanvasAddon } from '@xterm/addon-canvas'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { SearchAddon, ISearchOptions, ISearchAddonOptions } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 import { addDisposableEventListener, Disposable, detectWebGLContext, log } from '../utils'
-import { debounce } from 'lodash'
+import { debounce, omit, merge } from 'lodash'
+import { DEFAULT_XTERM_OPTIONS, DEFAULT_SEARCH_OPTIONS } from './config'
 
 export interface EnhancedTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'
-  webLinks?: boolean
   fit?: boolean
+  searchOptions?: ISearchOptions & Partial<ISearchAddonOptions>
   xtermOptions?: ITerminalOptions & ITerminalInitOnlyOptions
 }
 
 export class TerminalCore extends Disposable {
-  fitAddon: FitAddon
+  fitAddon?: FitAddon
 
   private webglAddon?: WebglAddon
 
   private canvasAddon?: CanvasAddon
 
-  xterm: Terminal
+  searchAddon: SearchAddon
+
+  searchOptions: ISearchOptions
+
+  xterm?: Terminal
 
   options: EnhancedTerminalOptions
 
@@ -30,17 +36,12 @@ export class TerminalCore extends Disposable {
 
     this.options = {
       rendererType: 'webgl',
-      webLinks: true,
       fit: true,
       ...options,
     }
 
-    this.xterm = new Terminal({
-      cursorBlink: true,
-      ...this.options.xtermOptions,
-    })
-    // 注册后调用 this.dispose 会自动调用 this.xterm.dispose 清理
-    this.register(this.xterm)
+    this.options.xtermOptions = merge(DEFAULT_XTERM_OPTIONS, this.options.xtermOptions)
+    this.searchOptions = merge(DEFAULT_SEARCH_OPTIONS, omit(this.options.searchOptions, 'highlightLimit'))
   }
 
   init(element: string | HTMLElement) {
@@ -54,10 +55,12 @@ export class TerminalCore extends Disposable {
       element = el
     }
 
+    this.xterm = new Terminal(this.options.xtermOptions)
+    // 注册后调用 this.dispose 会自动调用 this.xterm.dispose 清理
+    this.register(this.xterm)
+
     // 添加 weblinks addon
-    if (this.options.webLinks) {
-      this.xterm.loadAddon(new WebLinksAddon())
-    }
+    this.xterm.loadAddon(new WebLinksAddon())
 
     // 初始化渲染器
     this.initRenderer()
@@ -72,6 +75,10 @@ export class TerminalCore extends Disposable {
       this.xterm.loadAddon(this.fitAddon)
       this.fit()
     }
+
+    // 传入参数, 限制显示高亮的数量
+    this.searchAddon = new SearchAddon({ highlightLimit: this.options.searchOptions?.highlightLimit })
+    this.xterm.loadAddon(this.searchAddon)
 
     return this.xterm
   }
@@ -146,6 +153,33 @@ export class TerminalCore extends Disposable {
   // 启用输入
   enableStdIn = () => {
     this.xterm.options.disableStdin = false
+  }
+
+  // search 相关
+
+  // 查找下一个
+  findNext = (keyword: string, searchOptions?: ISearchOptions) => {
+    if (!this.searchAddon) throw new Error('Please init the terminal first')
+    this.changeSearchOptions(searchOptions)
+    this.searchAddon.findNext(keyword, this.searchOptions)
+  }
+
+  // 查找上一个
+  findPrevious = (keyword: string, searchOptions?: ISearchOptions) => {
+    if (!this.searchAddon) throw new Error('Please init the terminal first')
+    this.changeSearchOptions(searchOptions)
+    this.searchAddon.findPrevious(keyword, this.searchOptions)
+  }
+
+  // 修改查找配置
+  changeSearchOptions = (searchOptions: ISearchOptions) => {
+    this.searchOptions = merge(this.searchOptions, searchOptions)
+  }
+
+  // 退出查找
+  exitSearch = () => {
+    this.searchAddon?.clearDecorations()
+    this.xterm?.clearSelection()
   }
 
   write = (data: string | Uint8Array, callback?: () => void) => this.xterm.write(data, callback)

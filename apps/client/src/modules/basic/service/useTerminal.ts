@@ -11,12 +11,60 @@ export function useTerminal() {
 
   useEffect(() => {
     if (terminalEl.current) {
-      terminal.init(terminalEl.current)
-      // const terminal = new Terminal()
-      // terminal.open(terminalEl.current)
+      const xterm = terminal.init(terminalEl.current)
+      terminal.changeSearchOptions({
+        decorations: {
+          matchBackground: '#EFBE28', // 匹配项的背景色
+          matchBorder: '#8FBEFF', // 匹配项的边框色
+          matchOverviewRuler: '#BBF494', // 匹配项在 OverviewRuler 中显示的颜色
+          activeMatchBackground: '#FF0000', // 当前匹配项的背景色
+          activeMatchBorder: '#1677FF', // 当前匹配项的边框色
+          activeMatchColorOverviewRuler: '#0000FF', // 当前匹配项在 OverviewRuler 中显示的颜色
+        },
+      })
       terminal.fitWindowResize()
 
-      terminal.write('service connecting...')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
+      terminal.write('service connecting...\r\n')
 
       setTimeout(() => {
         // terminal.write('\x1b[1K\r')
@@ -46,5 +94,6 @@ export function useTerminal() {
 
   return {
     terminalEl,
+    terminal,
   }
 }
