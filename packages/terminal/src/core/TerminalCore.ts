@@ -5,7 +5,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon, ISearchOptions, ISearchAddonOptions } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
-import { addDisposableEventListener, Disposable, detectWebGLContext, log } from '../utils'
+import { addDisposableEventListener, Disposable, detectWebGLContext, log, toDisposable } from '../utils'
 import { debounce, omit, merge } from 'lodash'
 import { DEFAULT_XTERM_OPTIONS, DEFAULT_SEARCH_OPTIONS } from './config'
 
@@ -31,6 +31,8 @@ export class TerminalCore extends Disposable {
 
   options: EnhancedTerminalOptions
 
+  element?: HTMLElement
+
   constructor(options: EnhancedTerminalOptions = {}) {
     super()
 
@@ -54,6 +56,8 @@ export class TerminalCore extends Disposable {
       if (!el) throw new Error(`Can't find element by id: ${id}`)
       element = el
     }
+
+    this.element = element
 
     this.xterm = new Terminal(this.options.xtermOptions)
     // 注册后调用 this.dispose 会自动调用 this.xterm.dispose 清理
@@ -85,6 +89,7 @@ export class TerminalCore extends Disposable {
 
   fit = () => {
     try {
+      if (!this.fitAddon) throw new Error("Please open the 'fit' option")
       this.fitAddon?.fit()
     } catch (e) {
       log.error('fit error', e)
@@ -120,9 +125,21 @@ export class TerminalCore extends Disposable {
   }
 
   // 添加 window resize 事件
-  fitWindowResize(debounce = true) {
+  fitWindowResize = (debounce = true) => {
     this.register(addDisposableEventListener(window, 'resize', debounce ? this.debounceResizeCb : this.resizeCb))
     // window.addEventListener('resize', debounce ? this.debounceResizeCb : this.resizeCb)
+  }
+
+  // 添加当前 dom resize
+  fitDomResize = (debounce = true) => {
+    this.throwInitError()
+    const resizeObserver = new ResizeObserver(() => {
+      debounce ? this.debounceResizeCb() : this.resizeCb()
+    })
+
+    resizeObserver.observe(this.element)
+
+    this.register(toDisposable(() => resizeObserver.disconnect()))
   }
 
   // 阻止粘贴
@@ -159,14 +176,14 @@ export class TerminalCore extends Disposable {
 
   // 查找下一个
   findNext = (keyword: string, searchOptions?: ISearchOptions) => {
-    if (!this.searchAddon) throw new Error('Please init the terminal first')
+    this.throwInitError()
     this.changeSearchOptions(searchOptions)
     this.searchAddon.findNext(keyword, this.searchOptions)
   }
 
   // 查找上一个
   findPrevious = (keyword: string, searchOptions?: ISearchOptions) => {
-    if (!this.searchAddon) throw new Error('Please init the terminal first')
+    this.throwInitError()
     this.changeSearchOptions(searchOptions)
     this.searchAddon.findPrevious(keyword, this.searchOptions)
   }
@@ -268,5 +285,9 @@ export class TerminalCore extends Disposable {
       default:
         break
     }
+  }
+
+  private throwInitError() {
+    if (!this.element || !this.xterm || !this.searchAddon) throw new Error('Please init the terminal first')
   }
 }

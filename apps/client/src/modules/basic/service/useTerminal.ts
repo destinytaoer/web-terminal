@@ -22,8 +22,11 @@ export function useTerminal() {
           activeMatchColorOverviewRuler: '#0000FF', // 当前匹配项在 OverviewRuler 中显示的颜色
         },
       })
-      terminal.fitWindowResize()
-
+      // terminal.fitWindowResize()
+      terminal.fitDomResize()
+      xterm.onResize((...args) => {
+        console.log('args', args)
+      })
       terminal.write('service connecting...\r\n')
       terminal.write('service connecting...\r\n')
       terminal.write('service connecting...\r\n')
