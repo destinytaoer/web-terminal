@@ -23,7 +23,7 @@ export class TerminalCore extends Disposable {
 
   private canvasAddon?: CanvasAddon
 
-  searchAddon: SearchAddon
+  searchAddon?: SearchAddon
 
   searchOptions: ISearchOptions
 
@@ -84,6 +84,15 @@ export class TerminalCore extends Disposable {
     this.searchAddon = new SearchAddon({ highlightLimit: this.options.searchOptions?.highlightLimit })
     this.xterm.loadAddon(this.searchAddon)
 
+    this.register(
+      toDisposable(() => {
+        this.element = undefined
+        this.xterm = undefined
+        this.fitAddon = undefined
+        this.searchAddon = undefined
+      }),
+    )
+
     return this.xterm
   }
 
@@ -133,18 +142,22 @@ export class TerminalCore extends Disposable {
   // 添加当前 dom resize
   fitDomResize = (debounce = true) => {
     this.throwInitError()
-    const resizeObserver = new ResizeObserver(() => {
-      debounce ? this.debounceResizeCb() : this.resizeCb()
+    const resizeObserver = new window.ResizeObserver(() => {
+      if (debounce) {
+        this.debounceResizeCb()
+      } else {
+        this.resizeCb()
+      }
     })
 
-    resizeObserver.observe(this.element)
+    resizeObserver.observe(this.element!)
 
     this.register(toDisposable(() => resizeObserver.disconnect()))
   }
 
   // 阻止粘贴
   preventPaste = (cb?: () => void) => {
-    if (this.xterm.textarea) {
+    if (this.xterm?.textarea) {
       this.register(
         addDisposableEventListener(
           this.xterm.textarea,
@@ -164,12 +177,14 @@ export class TerminalCore extends Disposable {
 
   // 禁用输入
   disableStdIn = () => {
-    this.xterm.options.disableStdin = true
+    this.throwInitError()
+    this.xterm!.options.disableStdin = true
   }
 
   // 启用输入
   enableStdIn = () => {
-    this.xterm.options.disableStdin = false
+    this.throwInitError()
+    this.xterm!.options.disableStdin = false
   }
 
   // search 相关
@@ -177,15 +192,15 @@ export class TerminalCore extends Disposable {
   // 查找下一个
   findNext = (keyword: string, searchOptions?: ISearchOptions) => {
     this.throwInitError()
-    this.changeSearchOptions(searchOptions)
-    this.searchAddon.findNext(keyword, this.searchOptions)
+    if (searchOptions) this.changeSearchOptions(searchOptions)
+    this.searchAddon!.findNext(keyword, this.searchOptions)
   }
 
   // 查找上一个
   findPrevious = (keyword: string, searchOptions?: ISearchOptions) => {
     this.throwInitError()
-    this.changeSearchOptions(searchOptions)
-    this.searchAddon.findPrevious(keyword, this.searchOptions)
+    if (searchOptions) this.changeSearchOptions(searchOptions)
+    this.searchAddon!.findPrevious(keyword, this.searchOptions)
   }
 
   // 修改查找配置
@@ -199,21 +214,21 @@ export class TerminalCore extends Disposable {
     this.xterm?.clearSelection()
   }
 
-  write = (data: string | Uint8Array, callback?: () => void) => this.xterm.write(data, callback)
+  write = (data: string | Uint8Array, callback?: () => void) => this.xterm?.write(data, callback)
 
-  focus = () => this.xterm.focus()
+  focus = () => this.xterm?.focus()
 
-  clear = () => this.xterm.clear()
+  clear = () => this.xterm?.clear()
 
-  reset = () => this.xterm.reset()
+  reset = () => this.xterm?.reset()
 
-  scrollToTop = () => this.xterm.scrollToTop()
+  scrollToTop = () => this.xterm?.scrollToTop()
 
-  scrollToBottom = () => this.xterm.scrollToBottom()
+  scrollToBottom = () => this.xterm?.scrollToBottom()
 
-  selectAll = () => this.xterm.selectAll()
+  selectAll = () => this.xterm?.selectAll()
 
-  loadAddon = (addon: ITerminalAddon) => this.xterm.loadAddon(addon)
+  loadAddon = (addon: ITerminalAddon) => this.xterm?.loadAddon(addon)
 
   private initRenderer() {
     const { rendererType } = this.options
