@@ -12,6 +12,7 @@ import { DEFAULT_XTERM_OPTIONS, DEFAULT_SEARCH_OPTIONS } from './config'
 export interface EnhancedTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'
   fit?: boolean
+  search?: boolean
   searchOptions?: ISearchOptions & Partial<ISearchAddonOptions>
   xtermOptions?: ITerminalOptions & ITerminalInitOnlyOptions
 }
@@ -39,6 +40,7 @@ export class TerminalCore extends Disposable {
     this.options = {
       rendererType: 'webgl',
       fit: true,
+      search: false,
       ...options,
     }
 
@@ -81,8 +83,10 @@ export class TerminalCore extends Disposable {
     }
 
     // 传入参数, 限制显示高亮的数量
-    this.searchAddon = new SearchAddon({ highlightLimit: this.options.searchOptions?.highlightLimit })
-    this.xterm.loadAddon(this.searchAddon)
+    if (this.options.search) {
+      this.searchAddon = new SearchAddon({ highlightLimit: this.options.searchOptions?.highlightLimit })
+      this.xterm.loadAddon(this.searchAddon)
+    }
 
     this.register(
       toDisposable(() => {
@@ -110,9 +114,9 @@ export class TerminalCore extends Disposable {
   }
 
   fit = () => {
+    this.throwFitError()
     if (!this.resizeable) return
     try {
-      if (!this.fitAddon) throw new Error("Please open the 'fit' option")
       this.fitAddon?.fit()
     } catch (e) {
       log.error('fit error', e)
@@ -125,6 +129,7 @@ export class TerminalCore extends Disposable {
   // 但是 Terminal -> PTY/TTY 之间是存在一个链路的, 在链路中传递需要一定的时间, 频繁触发 resize 会导致 Terminal 中已有文本渲染异常
   // 通过 debounce 的方式可以减少渲染异常, 但没办法完全避免, 实际用户也不会过于频繁去改变尺寸 https://github.com/xtermjs/xterm.js/issues/4489
   fitDebounce = debounce(() => {
+    this.throwFitError()
     this.fit()
   }, 500)
 
@@ -189,17 +194,16 @@ export class TerminalCore extends Disposable {
   }
 
   // search 相关
-
   // 查找下一个
   findNext = (keyword: string, searchOptions?: ISearchOptions) => {
-    this.throwInitError()
+    this.throwSearchError()
     if (searchOptions) this.changeSearchOptions(searchOptions)
     this.searchAddon!.findNext(keyword, this.searchOptions)
   }
 
   // 查找上一个
   findPrevious = (keyword: string, searchOptions?: ISearchOptions) => {
-    this.throwInitError()
+    this.throwSearchError()
     if (searchOptions) this.changeSearchOptions(searchOptions)
     this.searchAddon!.findPrevious(keyword, this.searchOptions)
   }
@@ -211,6 +215,7 @@ export class TerminalCore extends Disposable {
 
   // 退出查找
   exitSearch = () => {
+    this.throwSearchError()
     this.searchAddon?.clearDecorations()
     this.xterm?.clearSelection()
   }
@@ -303,7 +308,15 @@ export class TerminalCore extends Disposable {
     }
   }
 
+  private throwFitError() {
+    if (!this.fitAddon) throw new Error("Please init the terminal first and open the 'fit' option to use this method")
+  }
+
+  private throwSearchError() {
+    if (!this.searchAddon) throw new Error("Please init the terminal first and  open the 'search' option to use this method")
+  }
+
   private throwInitError() {
-    if (!this.element || !this.xterm || !this.searchAddon) throw new Error('Please init the terminal first')
+    if (!this.element || !this.xterm) throw new Error('Please init the terminal first')
   }
 }
