@@ -4,8 +4,9 @@ import NotFoundPage from './404'
 import { GlobalLayout } from '@/app/layout'
 import { Home } from '@/modules/home'
 import { NodePty } from '@/modules/node-pty'
-import { ExecBase64, ExecBinary, ExecZmodem } from '@/modules/k8s'
+// import { ExecBase64, ExecBinary, ExecZmodem } from '@/modules/k8s'
 import { Basic } from '@/modules/basic'
+import { Exec } from '@/modules/exec'
 
 export const router = createBrowserRouter([
   {
@@ -24,6 +25,10 @@ export const router = createBrowserRouter([
       {
         path: '/node-pty',
         element: <NodePty />,
+      },
+      {
+        path: '/exec',
+        element: <Exec />,
       },
       { path: '*', element: <NotFoundPage /> },
     ],

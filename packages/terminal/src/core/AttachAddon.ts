@@ -2,6 +2,11 @@ import { ITerminalAddon, Terminal } from '@xterm/xterm'
 import { toDisposable, Disposable, log, EventEmitter, addSocketListener, addEventEmitterListener, EventHandler, createHeartbeat } from '../utils'
 
 // 接收消息的类型
+export const ReceiveMessageType = {
+  STDOUT: 'stdout',
+  HEARTBEAT: 'heartbeat',
+  ERROR: 'error',
+} as const
 export type ReceiveMessageType = 'stdout' | 'heartbeat' | 'error' | string
 
 export type ReceiveMessageData =
@@ -13,6 +18,12 @@ export type ReceiveMessageData =
   | { type: 'error'; content?: string | Uint8Array; error: any }
 
 // 发送消息的类型
+export const SendMessageType = {
+  DATA: 'data',
+  BINARY: 'binary',
+  RESIZE: 'resize',
+  HEARTBEAT: 'heartbeat',
+} as const
 export type SendMessageType = 'data' | 'binary' | 'resize' | 'heartbeat'
 
 export type SendMessageData =
@@ -65,8 +76,18 @@ export abstract class AttachAddon extends Disposable implements ITerminalAddon {
 
   attachSocket(socket: WebSocket) {
     this.register(addSocketListener(socket, 'message', (ev) => this.onMessage(ev.data)))
-    this.register(addSocketListener(socket, 'close', () => this.dispose()))
-    this.register(addSocketListener(socket, 'error', () => this.dispose()))
+    this.register(
+      addSocketListener(socket, 'close', (e) => {
+        const { code, reason } = e
+        log.error('socket closed by', code, reason)
+        this.dispose()
+      }),
+    )
+    this.register(
+      addSocketListener(socket, 'error', (e) => {
+        log.error('socket error: ', e)
+      }),
+    )
     if (this.heartbeatTime) this.addHeartbeat(this.heartbeatTime)
     this.register(
       toDisposable(() => {
@@ -80,9 +101,9 @@ export abstract class AttachAddon extends Disposable implements ITerminalAddon {
   }
 
   attachTerminal(terminal: Terminal) {
-    this.register(terminal.onData((data) => this.sendMessage('data', data)))
-    this.register(terminal.onBinary((data) => this.sendMessage('binary', data)))
-    this.register(terminal.onResize((data) => this.sendMessage('resize', data)))
+    this.register(terminal.onData((data) => this.sendMessage(SendMessageType.DATA, data)))
+    this.register(terminal.onBinary((data) => this.sendMessage(SendMessageType.BINARY, data)))
+    this.register(terminal.onResize((data) => this.sendMessage(SendMessageType.RESIZE, data)))
   }
 
   onMessage(data: string | ArrayBuffer) {
@@ -121,7 +142,7 @@ export abstract class AttachAddon extends Disposable implements ITerminalAddon {
     // 添加心跳
     const heartbeat = createHeartbeat(() => {
       log.info('send heartbeat', new Date().toLocaleString())
-      this.sendMessage('heartbeat')
+      this.sendMessage(SendMessageType.HEARTBEAT)
     }, heartbeatTime)
 
     this.register(
@@ -146,10 +167,10 @@ export abstract class AttachAddon extends Disposable implements ITerminalAddon {
         log.error('Attach addon was loaded before socket was open')
         break
       case WebSocket.CLOSING:
-        log.warn('Attach addon socket is closing')
+        log.warn('Socket is closing')
         break
       case WebSocket.CLOSED:
-        log.error('Attach addon socket is closed')
+        log.error('Socket is closed')
         break
       default:
         log.error('Unexpected socket state')
