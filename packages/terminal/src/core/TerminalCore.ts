@@ -96,15 +96,6 @@ export class TerminalCore extends Disposable {
     return this.xterm
   }
 
-  fit = () => {
-    try {
-      if (!this.fitAddon) throw new Error("Please open the 'fit' option")
-      this.fitAddon?.fit()
-    } catch (e) {
-      log.error('fit error', e)
-    }
-  }
-
   // 启用/禁用 resize
   // 用于 Terminal 在某个 tab 下展示, 来回切换 tab 导致 Terminal 显示异常的问题
   // 切换到其他 tab 时调用 suspend, 切换回 Terminal tab 时调用 resume
@@ -118,35 +109,45 @@ export class TerminalCore extends Disposable {
     this.resizeable = true
   }
 
+  fit = () => {
+    if (!this.resizeable) return
+    try {
+      if (!this.fitAddon) throw new Error("Please open the 'fit' option")
+      this.fitAddon?.fit()
+    } catch (e) {
+      log.error('fit error', e)
+    }
+  }
+
   // 容器尺寸变化需要进行适配, 调用 fitAddon.fit() 方法
   // 为什么需要 debounce?
   // 背景: 在与 PTY/TTY 交互时, 需要保持 Terminal 和 PTY/TTY 尺寸的一致性, 适配尺寸变化会触发 terminal.onResize 回调, 在 onResize 回调中会给 PTY/TTY 发送当前的尺寸信息, 以此来保持一致 https://github.com/xtermjs/xterm.js/wiki/FAQ
   // 但是 Terminal -> PTY/TTY 之间是存在一个链路的, 在链路中传递需要一定的时间, 频繁触发 resize 会导致 Terminal 中已有文本渲染异常
   // 通过 debounce 的方式可以减少渲染异常, 但没办法完全避免, 实际用户也不会过于频繁去改变尺寸 https://github.com/xtermjs/xterm.js/issues/4489
-  private debounceResizeCb = debounce(() => {
-    this.resizeCb()
+  fitDebounce = debounce(() => {
+    this.fit()
   }, 500)
-
-  private resizeCb = () => {
-    if (this.resizeable) {
-      this.fit()
-    }
-  }
 
   // 添加 window resize 事件
   fitWindowResize = (debounce = true) => {
-    this.register(addDisposableEventListener(window, 'resize', debounce ? this.debounceResizeCb : this.resizeCb))
+    this.register(addDisposableEventListener(window, 'resize', debounce ? this.fitDebounce : this.fit))
     // window.addEventListener('resize', debounce ? this.debounceResizeCb : this.resizeCb)
   }
 
   // 添加当前 dom resize
   fitDomResize = (debounce = true) => {
     this.throwInitError()
+    if (!window.ResizeObserver) {
+      log.error('Current browser is not support ResizeObserver, fallback to window resize event, please handle other resize yourself!')
+      this.fitWindowResize()
+      return
+    }
+
     const resizeObserver = new window.ResizeObserver(() => {
       if (debounce) {
-        this.debounceResizeCb()
+        this.fitDebounce()
       } else {
-        this.resizeCb()
+        this.fit()
       }
     })
 
