@@ -106,11 +106,15 @@ export class TerminalCore extends Disposable {
   private resizeable = true
 
   suspendResize() {
+    this.throwFitError()
     this.resizeable = false
   }
 
   resumeResize() {
+    this.throwFitError()
     this.resizeable = true
+    // 恢复后自动适配
+    this.fit()
   }
 
   fit = () => {
@@ -135,6 +139,8 @@ export class TerminalCore extends Disposable {
 
   // 添加 window resize 事件
   fitWindowResize = (debounce = true) => {
+    this.throwInitError()
+    this.throwFitError()
     this.register(addDisposableEventListener(window, 'resize', debounce ? this.fitDebounce : this.fit))
     // window.addEventListener('resize', debounce ? this.debounceResizeCb : this.resizeCb)
   }
@@ -142,6 +148,7 @@ export class TerminalCore extends Disposable {
   // 添加当前 dom resize
   fitDomResize = (debounce = true) => {
     this.throwInitError()
+    this.throwFitError()
     if (!window.ResizeObserver) {
       log.error('Current browser is not support ResizeObserver, fallback to window resize event, please handle other resize yourself!')
       this.fitWindowResize()
@@ -210,6 +217,7 @@ export class TerminalCore extends Disposable {
 
   // 修改查找配置
   changeSearchOptions = (searchOptions: ISearchOptions) => {
+    this.throwSearchError()
     this.searchOptions = merge(this.searchOptions, searchOptions)
   }
 
