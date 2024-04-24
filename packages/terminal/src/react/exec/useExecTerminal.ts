@@ -6,10 +6,6 @@ import { Protocol, spliceUrl } from './config'
 import { ExecAttachAddon } from './ExecAttachAddon.ts'
 import { addSocketListener, Disposable, log } from '../../utils'
 
-// function parseUrl() {
-//
-// }
-
 export const useExecTerminal = (url?: string) => {
   const terminalEl = React.useRef<HTMLDivElement>(null)
   const clear = React.useRef<Function>()
