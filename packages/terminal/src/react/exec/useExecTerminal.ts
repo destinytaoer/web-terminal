@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { useCreation } from 'ahooks'
 import { TerminalCore } from '../../core'
-import { useEffect } from 'react'
 import { Protocol, spliceUrl } from './config'
 import { ExecAttachAddon } from './ExecAttachAddon.ts'
 import { addSocketListener, Disposable, log } from '../../utils'
@@ -14,7 +13,7 @@ export const useExecTerminal = (url?: string) => {
     return new TerminalCore()
   }, [])
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (terminalEl.current) {
       const xterm = terminal.init(terminalEl.current)
       terminal.fitDomResize()

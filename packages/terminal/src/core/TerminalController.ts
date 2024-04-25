@@ -3,32 +3,31 @@
  * - https://zyxin.xyz/blog/2020-05/terminal-control-characters/
  * - https://www2.ccs.neu.edu/research/gpc/VonaUtils/vona/terminal/vtansi.htm
  * - https://en.wikipedia.org/wiki/ANSI_escape_code
- * - https://en.wikipedia.org/wiki/C0_and_C1_control_codes
  */
-import { C0, C1 } from '@xterm/xterm/src/common/data/EscapeSequences'
+// import { C0, C1, C1_ESCAPED } from '@xterm/xterm/src/common/data/EscapeSequences'
 
 export const TerminalController = {
   // 回车 CARRIAGE_RETURN
-  CR: C0.CR, // \x0d \r
+  CR: '\x0d', // \r
   // 换行 LINE_FEED
-  LF: C0.LF, // \x0a \n
+  LF: '\x0a', // \n
   // Form Feed 换页
-  FF: C0.FF, // \x0c
+  FF: '\x0c',
   // 回车换行
-  CRLF: `${C0.CR}${C0.LF}`, // \r\n
+  CRLF: '\x0d\x0a', // \r\n
   // 铃声
-  BEL: C0.BEL, // \x07
+  BEL: '\x07',
   // Backspace 退格键, 光标前移
-  BS: C0.BS, // \x08
+  BS: '\x08',
   // Tab
-  HT: C0.HT, // \x09
+  HT: '\x09',
   // 转义序列
-  ESC: C0.ESC, // \x1b
+  ESC: '\x1b',
 
   // Control Sequence Introducer  控制序列引入器
-  CSI: `${C0.ESC}${C1.CSI}`, // ESC [: \x1b[
+  CSI: '\x1b\x9b', // ESC [: \x1b[
   // Operating System Command  操作系统命令
-  OSC: `${C0.ESC}${C1.OSC}`, // ESC ]: \x1b]
+  OSC: '\x1b\x9d', // ESC ]: \x1b]
 
   // 修改标题
   changeTitle: (title: string) => {

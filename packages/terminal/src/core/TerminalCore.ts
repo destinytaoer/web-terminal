@@ -1,13 +1,15 @@
-import { ITerminalAddon, ITerminalInitOnlyOptions, ITerminalOptions, Terminal } from '@xterm/xterm'
 import { CanvasAddon } from '@xterm/addon-canvas'
-import { WebglAddon } from '@xterm/addon-webgl'
 import { FitAddon } from '@xterm/addon-fit'
+import { ISearchAddonOptions, ISearchOptions, SearchAddon } from '@xterm/addon-search'
 import { WebLinksAddon } from '@xterm/addon-web-links'
-import { SearchAddon, ISearchOptions, ISearchAddonOptions } from '@xterm/addon-search'
+import { WebglAddon } from '@xterm/addon-webgl'
+import { ITerminalAddon, ITerminalInitOnlyOptions, ITerminalOptions, Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
-import { addDisposableEventListener, Disposable, detectWebGLContext, log, toDisposable } from '../utils'
-import { debounce, omit, merge } from 'lodash'
-import { DEFAULT_XTERM_OPTIONS, DEFAULT_SEARCH_OPTIONS } from './config'
+import { debounce, merge, omit } from 'lodash'
+import '../style/xterm.css'
+import { addDisposableEventListener, detectWebGLContext, Disposable, log, toDisposable } from '../utils'
+import { AttachAddon } from './AttachAddon'
+import { DEFAULT_SEARCH_OPTIONS, DEFAULT_XTERM_OPTIONS } from './config'
 
 export interface EnhancedTerminalOptions {
   rendererType?: 'dom' | 'canvas' | 'webgl'
@@ -27,6 +29,8 @@ export class TerminalCore extends Disposable {
   searchAddon?: SearchAddon
 
   searchOptions: ISearchOptions
+
+  attachAddon?: AttachAddon
 
   xterm?: Terminal
 
@@ -241,6 +245,8 @@ export class TerminalCore extends Disposable {
   scrollToBottom = () => this.xterm?.scrollToBottom()
 
   selectAll = () => this.xterm?.selectAll()
+
+  clearSelection = () => this.xterm?.clearSelection()
 
   loadAddon = (addon: ITerminalAddon) => this.xterm?.loadAddon(addon)
 
