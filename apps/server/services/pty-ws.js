@@ -22,6 +22,7 @@ class PtyWs {
 
       const query = qs.parse(request.url.split('?')[1] ?? '')
       if (!query?.id) {
+        console.error('connect need send id in url query')
         return socket.close()
       }
       // 记录 id
