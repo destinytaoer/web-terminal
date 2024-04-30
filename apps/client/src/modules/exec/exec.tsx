@@ -3,7 +3,14 @@ import { Button, Form, Input } from 'antd'
 import { useExecTerminal } from 'terminal'
 
 export function Exec() {
-  const { terminalEl, connect } = useExecTerminal()
+  const { terminalEl, init, connect, dispose } = useExecTerminal()
+
+  React.useEffect(() => {
+    if (terminalEl.current) {
+      init()
+      return () => dispose()
+    }
+  }, [])
 
   const onConnect = (values: { url: string; token: string }) => {
     const { url, token } = values

@@ -6,7 +6,7 @@ export function useTerminal() {
   const terminalEl = useRef<HTMLDivElement>(null)
 
   const terminal = useCreation(() => {
-    return new TerminalCore()
+    return new TerminalCore({ search: true })
   }, [])
 
   useEffect(() => {
