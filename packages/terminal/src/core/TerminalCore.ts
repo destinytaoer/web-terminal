@@ -3,7 +3,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { ISearchAddonOptions, ISearchOptions, SearchAddon } from '@xterm/addon-search'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
-import { ITerminalAddon, ITerminalInitOnlyOptions, ITerminalOptions, Terminal } from '@xterm/xterm'
+import { ITerminalAddon, ITerminalInitOnlyOptions, ITerminalOptions, ITheme, Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
 import { debounce, merge, omit } from 'lodash'
 import '../style/xterm.css'
@@ -48,8 +48,8 @@ export class TerminalCore extends Disposable {
       ...options,
     }
 
-    this.options.xtermOptions = merge(DEFAULT_XTERM_OPTIONS, this.options.xtermOptions)
-    this.searchOptions = merge(DEFAULT_SEARCH_OPTIONS, omit(this.options.searchOptions, 'highlightLimit'))
+    this.options.xtermOptions = merge({}, DEFAULT_XTERM_OPTIONS, this.options.xtermOptions)
+    this.searchOptions = merge({}, DEFAULT_SEARCH_OPTIONS, omit(this.options.searchOptions, 'highlightLimit'))
   }
 
   init(element: string | HTMLElement) {
@@ -220,9 +220,10 @@ export class TerminalCore extends Disposable {
   }
 
   // 修改查找配置
+  // 注意修改后, 只会在下一个查找时生效
   changeSearchOptions = (searchOptions: ISearchOptions) => {
     this.throwSearchError()
-    this.searchOptions = merge(this.searchOptions, searchOptions)
+    this.searchOptions = merge({}, this.searchOptions, searchOptions)
   }
 
   // 退出查找
@@ -230,6 +231,21 @@ export class TerminalCore extends Disposable {
     this.throwSearchError()
     this.searchAddon?.clearDecorations()
     this.xterm?.clearSelection()
+  }
+
+  // 可传部分参数, 其他取之前的配置
+  changeTheme = (theme: ITheme) => {
+    this.throwInitError()
+    const newTheme = merge({}, this.xterm.options.theme, theme)
+    this.changeOptions({
+      theme: newTheme,
+    })
+  }
+
+  // 可传部分参数
+  changeOptions = (options: ITerminalOptions) => {
+    this.throwInitError()
+    this.xterm.options = options
   }
 
   write = (data: string | Uint8Array, callback?: () => void) => this.xterm?.write(data, callback)
